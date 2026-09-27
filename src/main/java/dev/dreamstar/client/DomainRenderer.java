@@ -62,6 +62,10 @@ public final class DomainRenderer {
     }
 
     @SubscribeEvent public static void render(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            FootstepRipples.render(event);
+            return;
+        }
         boolean skyPass = event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY;
         if ((!skyPass && event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) || shader == null) return;
         Minecraft mc = Minecraft.getInstance();
@@ -139,10 +143,19 @@ public final class DomainRenderer {
     @SubscribeEvent public static void particles(TickEvent.ClientTickEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (event.phase != TickEvent.Phase.END) return;
-        if (mc.level == null || mc.player == null) { resetSky(); return; }
-        if (trackedLevel != mc.level) { resetSky(); trackedLevel = mc.level; }
+        if (mc.level == null || mc.player == null) {
+            resetSky();
+            FootstepRipples.clear();
+            return;
+        }
+        if (trackedLevel != mc.level) {
+            resetSky();
+            FootstepRipples.clear();
+            trackedLevel = mc.level;
+        }
         if (mc.isPaused()) return;
         var domains = nearbyDomains();
+        FootstepRipples.tick(mc.level, domains);
         float skyTarget = 0;
         for (var domain : domains) {
             float target = SkyTransition.target(mc.player.position().distanceTo(domain.position()), domain.radius(), domain.opacity(0));
@@ -173,6 +186,7 @@ public final class DomainRenderer {
 
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) {
         resetSky();
+        FootstepRipples.clear();
         if (depthCopy != null) {
             depthCopy.destroyBuffers();
             depthCopy = null;
