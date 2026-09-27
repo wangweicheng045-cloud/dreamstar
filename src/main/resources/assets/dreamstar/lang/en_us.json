@@ -1,0 +1,8 @@
+{
+  "spell.dreamstar.dream_star_domain": "Dream Star Domain",
+  "spell.dreamstar.dream_star_domain.description": "Unfold a 40-block spherical domain for 30 seconds. A planet and galaxy shimmer beneath your feet, the sky fades into violet star clouds on entry, and stars sparkle on boundary blocks.",
+  "entity.dreamstar.domain": "Dream Star Domain",
+  "command.dreamstar.preview": "Started a 30-second domain preview (debug: no mana cost or cooldown).",
+  "ui.dreamstar.duration": "Duration: %ss",
+  "ui.dreamstar.radius": "Domain radius: %s blocks"
+}
