@@ -36,7 +36,8 @@ import java.util.Set;
  */
 final class FootstepRipples {
     private static final int LIFETIME = 14;
-    private static final int MIN_SPAWN_INTERVAL = 4;
+    // 5, 5, 6 tick cadence averages 5.33 ticks, i.e. about 75% of the old 4-tick frequency.
+    private static final int[] SPAWN_INTERVALS = {5, 5, 6};
     private static final int MAX_RIPPLES = 192;
     private static final int SEGMENTS = 40;
 
@@ -89,7 +90,7 @@ final class FootstepRipples {
                 double dx = living.getX() - state.lastRippleX;
                 double dz = living.getZ() - state.lastRippleZ;
                 boolean movedEnough = dx * dx + dz * dz >= MOVE_STEP * MOVE_STEP;
-                boolean cooldownReady = gameTime - state.lastSpawnTick >= MIN_SPAWN_INTERVAL;
+                boolean cooldownReady = gameTime - state.lastSpawnTick >= state.currentInterval();
 
                 if (movedEnough && cooldownReady) {
                     // Feet are at entity Y. Lift a few centimetres to avoid z-fighting with blocks.
@@ -97,6 +98,7 @@ final class FootstepRipples {
                     state.lastRippleX = living.getX();
                     state.lastRippleZ = living.getZ();
                     state.lastSpawnTick = gameTime;
+                    state.advanceInterval();
                 }
             }
         }
@@ -141,7 +143,8 @@ final class FootstepRipples {
             float fadeOut = 1f - t;
             float alpha = fadeIn * fadeOut * fadeOut;
 
-            float width = Mth.lerp(radius / MAX_RADIUS, 0.012f, 0.030f);
+            // Slightly thicker than before so the ripple reads clearly against the star field.
+            float width = Mth.lerp(radius / MAX_RADIUS, 0.016f, 0.039f);
 
             // Soft outside glow.
             quads += appendRing(buffer, ripple.x, ripple.y, ripple.z,
@@ -149,11 +152,11 @@ final class FootstepRipples {
 
             // Mid glow.
             quads += appendRing(buffer, ripple.x, ripple.y + 0.0008, ripple.z,
-                    radius - width * 0.72f, radius + width * 0.72f, alpha * 0.55f);
+                    radius - width * 0.80f, radius + width * 0.80f, alpha * 0.58f);
 
             // Bright white core.
             quads += appendRing(buffer, ripple.x, ripple.y + 0.0016, ripple.z,
-                    radius - width * 0.24f, radius + width * 0.24f, alpha);
+                    radius - width * 0.30f, radius + width * 0.30f, alpha);
         }
 
         if (quads == 0) {
@@ -256,13 +259,22 @@ final class FootstepRipples {
         double lastRippleZ;
         long lastSpawnTick;
         long lastSeenTick;
+        int intervalIndex;
 
         MoveState(double x, double z, long gameTime) {
             lastRippleX = x;
             lastRippleZ = z;
             // Permit a ripple immediately once the entity has actually moved MOVE_STEP.
-            lastSpawnTick = gameTime - MIN_SPAWN_INTERVAL;
+            lastSpawnTick = gameTime - SPAWN_INTERVALS[0];
             lastSeenTick = gameTime;
+        }
+
+        int currentInterval() {
+            return SPAWN_INTERVALS[intervalIndex];
+        }
+
+        void advanceInterval() {
+            intervalIndex = (intervalIndex + 1) % SPAWN_INTERVALS.length;
         }
     }
 }
