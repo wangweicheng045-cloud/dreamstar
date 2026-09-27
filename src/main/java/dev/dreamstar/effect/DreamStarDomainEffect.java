@@ -32,6 +32,14 @@ public final class DreamStarDomainEffect extends MobEffect {
     public void applyEffectTick(LivingEntity livingEntity, int amplifier) {
         if (!(livingEntity instanceof ServerPlayer player)) return;
 
+        // If the player has entered a real flight state (creative double-space, or another
+        // compatible flight ability), Dream Star must not fight that flight by pulling them
+        // back to one block above the ground.
+        if (player.getAbilities().flying) {
+            player.fallDistance = 0.0F;
+            return;
+        }
+
         // The blessing should never build fall damage. Holding Shift intentionally releases
         // the hover and lets gravity bring the caster back to the ground.
         player.fallDistance = 0.0F;
