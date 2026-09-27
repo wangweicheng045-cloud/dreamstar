@@ -65,6 +65,8 @@ public final class DomainRenderer {
 
     @SubscribeEvent public static void render(RenderLevelStageEvent event) {
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            var cloudDomains = nearbyDomains();
+            BoundaryCloudRenderer.render(event, cloudDomains);
             FootstepRipples.render(event);
             return;
         }

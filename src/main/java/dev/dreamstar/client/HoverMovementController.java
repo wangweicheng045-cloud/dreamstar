@@ -17,9 +17,8 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = Dreamstar.ID, value = Dist.CLIENT)
 public final class HoverMovementController {
-    // Extremely fast Dream Star hover movement.
-    // User requested four times the previous 0.68 blocks/tick speed.
-    private static final double HOVER_MOVE_SPEED = 2.72D;
+    // Reduced to half of the previous 2.72 blocks/tick setting.
+    private static final double HOVER_MOVE_SPEED = 1.36D;
 
     private HoverMovementController() {}
 
