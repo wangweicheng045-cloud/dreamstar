@@ -17,16 +17,15 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = Dreamstar.ID, value = Dist.CLIENT)
 public final class HoverMovementController {
-    // Previous intended hover sprint was about 0.336 blocks/tick.
-    // 0.68 is slightly more than double that and roughly 240% of vanilla sprint speed.
-    private static final double HOVER_MOVE_SPEED = 0.68D;
+    // Extremely fast Dream Star hover movement.
+    // User requested four times the previous 0.68 blocks/tick speed.
+    private static final double HOVER_MOVE_SPEED = 2.72D;
 
     private HoverMovementController() {}
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+        // Apply on both START and END so vanilla airborne travel/friction cannot eat the boost.
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || mc.isPaused()) return;
 
