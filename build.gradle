@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+
+group = 'dev.dreamstar'
+version = mod_version
+base { archivesName = 'dreamstar-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'info'
+            mods { dreamstar { source sourceSets.main } }
+        }
+        client {}
+        server { args '--nogui' }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://code.redspace.io/releases' }
+    maven { url = 'https://maven.theillusivec4.top' }
+    maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+    maven { url = 'https://maven.kosmx.dev/' }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation fg.deobf("io.redspace:irons_spellbooks:${irons_version}")
+    runtimeOnly fg.deobf('io.redspace:irons_lib:1.20.1-2.1.0')
+    runtimeOnly fg.deobf('top.theillusivec4.curios:curios-forge:5.14.1+1.20.1')
+    runtimeOnly fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.8.2')
+    runtimeOnly fg.deobf('dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+// Deterministic tiny geometric sprite, generated from its four-point-star equation.
+def particleResources = layout.buildDirectory.dir('generated/particleResources')
+sourceSets.main.resources.srcDir(particleResources)
+tasks.register('generateStarTexture') {
+    inputs.property('spriteRevision', 1)
+    outputs.dir(particleResources)
+    doLast {
+        def image = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++) {
+            double dx = Math.abs((x - 15.5) / 15.5), dy = Math.abs((y - 15.5) / 15.5)
+            double diamond = Math.pow(dx, 0.55) + Math.pow(dy, 0.55)
+            double core = Math.max(0, Math.min(1, (1.08 - diamond) * 12))
+            double glow = Math.exp(-(dx * dx + dy * dy) * 16) * 0.4
+            int a = (int)(255 * Math.max(core, glow))
+            image.setRGB(x, y, (a << 24) | 0xffffff)
+        }
+        def target = particleResources.get().file('assets/dreamstar/textures/particle/boundary_star.png').asFile
+        target.parentFile.mkdirs()
+        javax.imageio.ImageIO.write(image, 'png', target)
+    }
+}
+test { useJUnitPlatform { excludeTags 'graphics' } }
+tasks.register('shaderSmokeTest', Test) {
+    description = 'Compile and render the production GLSL in a hidden OpenGL window.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'graphics' }
+    systemProperty 'dreamstar.shaderReport', layout.buildDirectory.dir('reports/shaders').get().asFile.absolutePath
+}
+processResources {
+    dependsOn tasks.named('generateStarTexture')
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') { expand(version: project.version) }
+}
+jar.finalizedBy('reobfJar')
