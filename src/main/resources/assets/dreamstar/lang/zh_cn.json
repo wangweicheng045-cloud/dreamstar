@@ -1,0 +1,8 @@
+{
+  "spell.dreamstar.dream_star_domain": "幻梦星域",
+  "spell.dreamstar.dream_star_domain.description": "以自身为中心展开半径40格的球形星域，持续30秒。脚下显现星球与银河，进入时天空渐染繁星与紫色云层，边缘方块持续闪烁星光。",
+  "entity.dreamstar.domain": "幻梦星域结界",
+  "command.dreamstar.preview": "已开启30秒星域预览（调试：不扣法力、不触发冷却）。",
+  "ui.dreamstar.duration": "持续时间：%s秒",
+  "ui.dreamstar.radius": "结界半径：%s格"
+}
