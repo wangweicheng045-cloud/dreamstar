@@ -36,6 +36,8 @@ public final class DomainRenderer {
     private static TextureTarget depthCopy;
     private static final DustParticleOptions ICE_DUST = new DustParticleOptions(new Vector3f(.38f, .7f, 1f), .65f);
     private static final int MAX_VISIBLE_DOMAINS = 8;
+    private static final int DOMAIN_AMBIENT_SAMPLES = 8;
+    private static final int LOCAL_WHITE_SPARKS = 2;
     private static final SkyTransition SKY = new SkyTransition();
     private static ClientLevel trackedLevel;
     private static Vec3 skyCenter = Vec3.ZERO;
@@ -171,15 +173,44 @@ public final class DomainRenderer {
             if (domain.opacity(0) <= .05f) continue;
             BoundaryParticles.tick(mc.level, domain);
             var random = mc.level.random;
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < DOMAIN_AMBIENT_SAMPLES; i++) {
                 double x = (random.nextDouble() * 2 - 1) * domain.radius();
                 double y = (random.nextDouble() * 2 - 1) * domain.radius();
                 double z = (random.nextDouble() * 2 - 1) * domain.radius();
                 if (x*x + y*y + z*z > domain.radius()*domain.radius()) continue;
                 var point = domain.position().add(x, y, z);
-                if (mc.level.getBlockState(BlockPos.containing(point)).isAir())
-                    mc.level.addParticle(i == 0 ? ParticleTypes.END_ROD : ICE_DUST,
-                            point.x, point.y, point.z, 0, .006, 0);
+                BlockPos pointPos = BlockPos.containing(point);
+                if (!mc.level.hasChunkAt(pointPos) || !mc.level.getBlockState(pointPos).isAir()) continue;
+
+                // More white flashes than before: roughly three END_ROD particles per tick per domain.
+                mc.level.addParticle(i % 3 == 0 ? ParticleTypes.END_ROD : ICE_DUST,
+                        point.x, point.y, point.z, 0, .006, 0);
+            }
+
+            // The domain is huge, so purely uniform random particles can all appear far away.
+            // When the local player is actually inside, guarantee a few nearby white flashes so
+            // the ambience is continuously readable in normal gameplay.
+            if (mc.player.position().distanceToSqr(domain.position())
+                    <= domain.radius() * domain.radius()) {
+                for (int spark = 0; spark < LOCAL_WHITE_SPARKS; spark++) {
+                    for (int attempt = 0; attempt < 6; attempt++) {
+                        double x = (random.nextDouble() * 2 - 1) * 8.0;
+                        double y = (random.nextDouble() * 2 - 1) * 3.5 + 1.0;
+                        double z = (random.nextDouble() * 2 - 1) * 8.0;
+                        var point = mc.player.position().add(x, y, z);
+                        if (point.distanceToSqr(domain.position())
+                                > domain.radius() * domain.radius()) continue;
+
+                        BlockPos pointPos = BlockPos.containing(point);
+                        if (!mc.level.hasChunkAt(pointPos)
+                                || !mc.level.getBlockState(pointPos).isAir()) continue;
+
+                        mc.level.addParticle(ParticleTypes.END_ROD,
+                                point.x, point.y, point.z,
+                                0, .004 + random.nextDouble() * .004, 0);
+                        break;
+                    }
+                }
             }
         }
     }
