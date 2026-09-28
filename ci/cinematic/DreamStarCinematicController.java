@@ -50,6 +50,8 @@ public final class DreamStarCinematicController {
     private static SimpleSoundInstance endAudio;
 
     private static long nextWhaleCallTick = Long.MIN_VALUE;
+    private static int whiteFadeInTicks;
+    private static int whiteFadeInTotal;
     private static int whiteHoldTicks;
     private static int whiteFadeTicks;
     private static int whiteFadeTotal;
@@ -155,8 +157,9 @@ public final class DreamStarCinematicController {
                 && !pendingDomainEndTriggered
                 && now >= pendingDomainEndTick - 20L) {
             pendingDomainEndTriggered = true;
-            // Begin one full second before collapse; total white/fade time remains about three seconds.
-            triggerWhite(10, 50);
+            // Fade in over the final second, reach full white exactly at collapse,
+            // then hold briefly and fade back over the following 2.5 seconds.
+            triggerWhiteSmooth(20, 10, 50);
         }
 
         if (pendingDomainEndTriggered && now == pendingDomainEndTick) {
@@ -198,17 +201,30 @@ public final class DreamStarCinematicController {
     }
 
     private static void triggerWhite(int holdTicks, int fadeTicks) {
+        whiteFadeInTicks = 0;
+        whiteFadeInTotal = 0;
+        whiteHoldTicks = Math.max(whiteHoldTicks, holdTicks);
+        whiteFadeTicks = Math.max(whiteFadeTicks, fadeTicks);
+        whiteFadeTotal = Math.max(whiteFadeTotal, fadeTicks);
+    }
+
+    private static void triggerWhiteSmooth(int fadeInTicks, int holdTicks, int fadeTicks) {
+        whiteFadeInTicks = Math.max(whiteFadeInTicks, fadeInTicks);
+        whiteFadeInTotal = Math.max(whiteFadeInTotal, fadeInTicks);
         whiteHoldTicks = Math.max(whiteHoldTicks, holdTicks);
         whiteFadeTicks = Math.max(whiteFadeTicks, fadeTicks);
         whiteFadeTotal = Math.max(whiteFadeTotal, fadeTicks);
     }
 
     private static void tickWhiteFlash() {
-        if (whiteHoldTicks > 0) {
+        if (whiteFadeInTicks > 0) {
+            whiteFadeInTicks--;
+        } else if (whiteHoldTicks > 0) {
             whiteHoldTicks--;
         } else if (whiteFadeTicks > 0) {
             whiteFadeTicks--;
         } else {
+            whiteFadeInTotal = 0;
             whiteFadeTotal = 0;
         }
     }
@@ -216,7 +232,9 @@ public final class DreamStarCinematicController {
     @SubscribeEvent
     public static void renderWhite(RenderGuiEvent.Post event) {
         float alpha;
-        if (whiteHoldTicks > 0) {
+        if (whiteFadeInTicks > 0 && whiteFadeInTotal > 0) {
+            alpha = Mth.clamp(1.0F - whiteFadeInTicks / (float) whiteFadeInTotal, 0.0F, 1.0F);
+        } else if (whiteHoldTicks > 0) {
             alpha = 1.0F;
         } else if (whiteFadeTicks > 0 && whiteFadeTotal > 0) {
             alpha = Mth.clamp(whiteFadeTicks / (float) whiteFadeTotal, 0.0F, 1.0F);
@@ -277,6 +295,8 @@ public final class DreamStarCinematicController {
         pendingDomainEndTriggered = false;
         nextWhaleCallTick = Long.MIN_VALUE;
         endingAudioStarted.clear();
+        whiteFadeInTicks = 0;
+        whiteFadeInTotal = 0;
         whiteHoldTicks = 0;
         whiteFadeTicks = 0;
         whiteFadeTotal = 0;

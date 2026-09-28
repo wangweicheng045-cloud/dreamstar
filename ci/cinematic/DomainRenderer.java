@@ -41,7 +41,7 @@ public final class DomainRenderer {
     private static final int DOMAIN_AMBIENT_SAMPLES = 8;
     private static final int LOCAL_WHITE_SPARKS = 2;
     private static final int CONSTELLATION_SPAWN_INTERVAL = 4;
-    private static final int WHALE_TRAIL_STARS = 28;
+    private static final int WHALE_TRAIL_STARS = 40;
     private static final int ENDING_RAIN_TICKS = 60;
     private static final int ENDING_FALLING_STARS = 42;
     private static final SkyTransition SKY = new SkyTransition();
@@ -201,9 +201,9 @@ public final class DomainRenderer {
                     mc.level.addParticle(
                             Dreamstar.BOUNDARY_STAR.get(),
                             point.x, point.y, point.z,
-                            (random.nextDouble() - .5D) * .008D,
-                            -.020D - random.nextDouble() * .035D,
-                            (random.nextDouble() - .5D) * .008D
+                            (random.nextDouble() - .5D) * .010D,
+                            -.055D - random.nextDouble() * .065D,
+                            (random.nextDouble() - .5D) * .010D
                     );
                 }
             }
@@ -278,8 +278,8 @@ public final class DomainRenderer {
             for (int i = 0; i < WHALE_TRAIL_STARS; i++) {
                 double behind = 1.5 + random.nextDouble() * 31.0;
                 var frame = path.frame(behind);
-                double side = (random.nextDouble() - .5) * (behind < 12 ? 2.6 : 1.6);
-                double up = (random.nextDouble() - .5) * 1.5;
+                double side = (random.nextDouble() - .5) * (behind < 12 ? 4.2 : 2.9);
+                double up = (random.nextDouble() - .5) * 2.5;
                 var p = frame.offset(side, up);
                 mc.level.addParticle(Dreamstar.BOUNDARY_STAR.get(), p.x, p.y, p.z,
                         (random.nextDouble() - .5) * .008,
@@ -289,8 +289,8 @@ public final class DomainRenderer {
 
             // Extra cluster at the extreme tail so the trailing end sparkles more strongly.
             var tail = path.frame(30.0);
-            for (int i = 0; i < 8; i++) {
-                var p = tail.offset((random.nextDouble() - .5) * 1.8, (random.nextDouble() - .5) * 1.4);
+            for (int i = 0; i < 12; i++) {
+                var p = tail.offset((random.nextDouble() - .5) * 3.0, (random.nextDouble() - .5) * 2.4);
                 mc.level.addParticle(Dreamstar.BOUNDARY_STAR.get(), p.x, p.y, p.z,
                         (random.nextDouble() - .5) * .010,
                         .006 + random.nextDouble() * .012,
