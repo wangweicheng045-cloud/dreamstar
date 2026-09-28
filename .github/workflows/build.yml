@@ -36,6 +36,8 @@ jobs:
           test -f /tmp/dreamstar-cinematic/build.gradle
           test -f /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/sounds/domain_cast.ogg
           test -f /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/sounds/domain_end.ogg
+          cp ci/cinematic/DreamStarCinematicController.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/DreamStarCinematicController.java
+          cp ci/cinematic/DreamStarSpell.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/spell/DreamStarSpell.java
 
       - name: Build Forge mod
         working-directory: /tmp/dreamstar-cinematic
@@ -45,7 +47,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.3.1-cinematic
+          name: dreamstar-1.20.1-0.3.1-cinematic-v2
           path: /tmp/dreamstar-cinematic/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
