@@ -1,4 +1,4 @@
-name: Build DreamStar
+name: Build DreamStar 0.3.1 Active Lock
 
 on:
   push:
@@ -28,14 +28,22 @@ jobs:
         with:
           gradle-version: "8.8"
 
+      - name: Reconstruct 0.3.1 source
+        run: |
+          cat ci/dreamstar-0.3.1.part* | base64 --decode > /tmp/dreamstar-source.zip
+          mkdir -p /tmp/dreamstar-source
+          unzip -q /tmp/dreamstar-source.zip -d /tmp/dreamstar-source
+          test -f /tmp/dreamstar-source/dreamstar-whale/build.gradle
+
       - name: Build Forge mod
-        run: gradle build --no-daemon --stacktrace
+        working-directory: /tmp/dreamstar-source/dreamstar-whale
+        run: gradle clean build --no-daemon --stacktrace
 
       - name: Upload JAR
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.2.0
-          path: build/libs/*.jar
+          name: dreamstar-1.20.1-0.3.1-active-domain-lock
+          path: /tmp/dreamstar-source/dreamstar-whale/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
