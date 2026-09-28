@@ -19,9 +19,12 @@ public final class ClientRegistration {
         event.registerSpriteSet(Dreamstar.BOUNDARY_STAR.get(), BoundaryStarParticle.Provider::new);
         event.registerSpriteSet(Dreamstar.CONSTELLATION.get(), ConstellationParticle.Provider::new);
     }
+
     @SubscribeEvent public static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Dreamstar.DOMAIN.get(), NoopRenderer::new);
         event.registerEntityRenderer(Dreamstar.STAR_SHARD_ATTACK.get(), NoopRenderer::new);
+        event.registerEntityRenderer(Dreamstar.STAR_WHALE.get(), StarWhaleRenderer::new);
+        event.registerEntityRenderer(Dreamstar.WHALE_SHARD.get(), WhaleShardRenderer::new);
     }
 
     @SubscribeEvent public static void shaders(RegisterShadersEvent event) throws IOException {

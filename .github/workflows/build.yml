@@ -44,6 +44,7 @@ jobs:
           cp ci/cinematic/ConstellationParticle.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/ConstellationParticle.java
           cp ci/cinematic/constellation.json /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/particles/constellation.json
           cp ci/cinematic/constellation_*.png /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/textures/particle/
+          cp ci/cinematic/dream_star_domain.png /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/textures/gui/spell_icons/dream_star_domain.png
 
       - name: Build Forge mod
         working-directory: /tmp/dreamstar-cinematic
@@ -53,7 +54,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.3.1-cinematic-particles
+          name: dreamstar-1.20.1-0.3.1-cinematic-particles-fixed
           path: /tmp/dreamstar-cinematic/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
