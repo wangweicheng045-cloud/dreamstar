@@ -67,6 +67,7 @@ public final class DomainRenderer {
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             var cloudDomains = nearbyDomains();
             BoundaryCloudRenderer.render(event, cloudDomains);
+            StarShardVfxRenderer.render(event);
             FootstepRipples.render(event);
             return;
         }

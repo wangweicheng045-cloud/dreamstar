@@ -20,6 +20,7 @@ public final class ClientRegistration {
     }
     @SubscribeEvent public static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Dreamstar.DOMAIN.get(), NoopRenderer::new);
+        event.registerEntityRenderer(Dreamstar.STAR_SHARD_ATTACK.get(), NoopRenderer::new);
     }
 
     @SubscribeEvent public static void shaders(RegisterShadersEvent event) throws IOException {

@@ -44,7 +44,7 @@ final class BoundaryCloudRenderer {
     private static final double ROTATION_SPEED = 0.19D;
 
     // Intentionally translucent; overlapping patches build up the visible shell.
-    private static final float BASE_ALPHA = 0.23F;
+    private static final float BASE_ALPHA = 0.45F;
 
     private BoundaryCloudRenderer() {}
 

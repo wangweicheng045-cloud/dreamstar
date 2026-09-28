@@ -3,6 +3,7 @@ package dev.dreamstar;
 import dev.dreamstar.domain.DomainEntity;
 import dev.dreamstar.effect.DreamStarDomainEffect;
 import dev.dreamstar.spell.DreamStarSpell;
+import dev.dreamstar.shard.StarShardAttackEntity;
 import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
@@ -33,6 +34,12 @@ public final class Dreamstar {
             () -> EntityType.Builder.<DomainEntity>of(DomainEntity::new, MobCategory.MISC)
                     .sized(0.1f, 0.1f).clientTrackingRange(16).updateInterval(20)
                     .fireImmune().build(ID + ":domain"));
+
+    public static final RegistryObject<EntityType<StarShardAttackEntity>> STAR_SHARD_ATTACK =
+            ENTITIES.register("star_shard_attack",
+                    () -> EntityType.Builder.<StarShardAttackEntity>of(StarShardAttackEntity::new, MobCategory.MISC)
+                            .sized(0.1f, 0.1f).clientTrackingRange(16).updateInterval(1)
+                            .fireImmune().build(ID + ":star_shard_attack"));
 
     public static final DeferredRegister<MobEffect> EFFECTS =
             DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, ID);
