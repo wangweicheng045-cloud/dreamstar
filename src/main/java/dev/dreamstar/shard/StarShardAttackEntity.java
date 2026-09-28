@@ -120,13 +120,14 @@ public final class StarShardAttackEntity extends Entity {
         for (int i = 0; i < SPAWN_TICKS.length; i++) {
             if (age == SPAWN_TICKS[i]) {
                 Vec3 pos = StarShardPlacement.shardPosition(target, seed(), i);
+                // Use the actual vanilla sound played when an amethyst block is placed.
                 level().playSound(
                         null,
                         pos.x, pos.y, pos.z,
-                        SoundEvents.AMETHYST_BLOCK_CHIME,
+                        SoundEvents.AMETHYST_BLOCK_PLACE,
                         SoundSource.PLAYERS,
                         0.95F,
-                        0.92F + i * 0.08F
+                        0.96F + i * 0.04F
                 );
             }
         }
