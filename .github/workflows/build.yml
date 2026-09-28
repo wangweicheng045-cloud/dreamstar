@@ -38,6 +38,12 @@ jobs:
           test -f /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/sounds/domain_end.ogg
           cp ci/cinematic/DreamStarCinematicController.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/DreamStarCinematicController.java
           cp ci/cinematic/DreamStarSpell.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/spell/DreamStarSpell.java
+          cp ci/cinematic/Dreamstar.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/Dreamstar.java
+          cp ci/cinematic/ClientRegistration.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/ClientRegistration.java
+          cp ci/cinematic/DomainRenderer.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/DomainRenderer.java
+          cp ci/cinematic/ConstellationParticle.java /tmp/dreamstar-cinematic/src/main/java/dev/dreamstar/client/ConstellationParticle.java
+          cp ci/cinematic/constellation.json /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/particles/constellation.json
+          cp ci/cinematic/constellation_*.png /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/textures/particle/
 
       - name: Build Forge mod
         working-directory: /tmp/dreamstar-cinematic
@@ -47,7 +53,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.3.1-cinematic-v2
+          name: dreamstar-1.20.1-0.3.1-cinematic-particles
           path: /tmp/dreamstar-cinematic/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30

@@ -153,9 +153,13 @@ public final class DreamStarCinematicController {
 
         if (pendingDomainEndTick != Long.MIN_VALUE
                 && !pendingDomainEndTriggered
-                && now >= pendingDomainEndTick) {
+                && now >= pendingDomainEndTick - 10L) {
             pendingDomainEndTriggered = true;
-            triggerWhite(10, 30);
+            // Begin half a second before collapse; total white/fade time is now about three seconds.
+            triggerWhite(10, 50);
+        }
+
+        if (pendingDomainEndTriggered && now == pendingDomainEndTick) {
             muteOtherSounds(mc, END_MUTE_TICKS);
         }
 
