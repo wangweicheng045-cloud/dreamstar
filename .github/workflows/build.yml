@@ -1,8 +1,8 @@
-name: Build DreamStar 0.3.1 Active Lock
+name: Build DreamStar 0.3.1 Cinematic
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "cinematic-0.3.1" ]
   workflow_dispatch:
 
 permissions:
@@ -28,22 +28,24 @@ jobs:
         with:
           gradle-version: "8.8"
 
-      - name: Reconstruct 0.3.1 source
+      - name: Reconstruct cinematic source
         run: |
-          cat ci/dreamstar-0.3.1.part* | base64 --decode > /tmp/dreamstar-source.zip
-          mkdir -p /tmp/dreamstar-source
-          unzip -q /tmp/dreamstar-source.zip -d /tmp/dreamstar-source
-          test -f /tmp/dreamstar-source/dreamstar-whale/build.gradle
+          cat ci/cinematic/chunk*.b64 | base64 --decode > /tmp/dreamstar-cinematic.zip
+          mkdir -p /tmp/dreamstar-cinematic
+          unzip -q /tmp/dreamstar-cinematic.zip -d /tmp/dreamstar-cinematic
+          test -f /tmp/dreamstar-cinematic/build.gradle
+          test -f /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/sounds/domain_cast.ogg
+          test -f /tmp/dreamstar-cinematic/src/main/resources/assets/dreamstar/sounds/domain_end.ogg
 
       - name: Build Forge mod
-        working-directory: /tmp/dreamstar-source/dreamstar-whale
+        working-directory: /tmp/dreamstar-cinematic
         run: gradle clean build --no-daemon --stacktrace
 
       - name: Upload JAR
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.3.1-active-domain-lock
-          path: /tmp/dreamstar-source/dreamstar-whale/build/libs/*.jar
+          name: dreamstar-1.20.1-0.3.1-cinematic
+          path: /tmp/dreamstar-cinematic/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
