@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.dreamstar.Dreamstar;
 import dev.dreamstar.domain.DomainEntity;
+import dev.dreamstar.domain.DomainTiming;
 import dev.dreamstar.whale.StarWhaleEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -40,7 +41,9 @@ public final class DomainRenderer {
     private static final int DOMAIN_AMBIENT_SAMPLES = 8;
     private static final int LOCAL_WHITE_SPARKS = 2;
     private static final int CONSTELLATION_SPAWN_INTERVAL = 4;
-    private static final int WHALE_TRAIL_STARS = 17;
+    private static final int WHALE_TRAIL_STARS = 28;
+    private static final int ENDING_RAIN_TICKS = 60;
+    private static final int ENDING_FALLING_STARS = 42;
     private static final SkyTransition SKY = new SkyTransition();
     private static ClientLevel trackedLevel;
     private static Vec3 skyCenter = Vec3.ZERO;
@@ -164,6 +167,7 @@ public final class DomainRenderer {
         if (mc.isPaused()) return;
         var domains = nearbyDomains();
         FootstepRipples.tick(mc.level, domains);
+        tickWhaleTrails(mc);
         float skyTarget = 0;
         for (var domain : domains) {
             float target = SkyTransition.target(mc.player.position().distanceTo(domain.position()), domain.radius(), domain.opacity(0));
@@ -179,6 +183,30 @@ public final class DomainRenderer {
             if (domain.opacity(0) <= .05f) continue;
             BoundaryParticles.tick(mc.level, domain);
             var random = mc.level.random;
+
+            // During the final three seconds, flood the upper interior with slow-falling white flashes.
+            long remainingTicks = domain.startTick() + DomainTiming.DURATION - mc.level.getGameTime();
+            if (remainingTicks > 0L && remainingTicks <= ENDING_RAIN_TICKS) {
+                for (int star = 0; star < ENDING_FALLING_STARS; star++) {
+                    double angle = random.nextDouble() * Math.PI * 2.0D;
+                    double radial = Math.sqrt(random.nextDouble()) * domain.radius() * .78D;
+                    double x = Math.cos(angle) * radial;
+                    double z = Math.sin(angle) * radial;
+                    double y = domain.radius() * (.12D + random.nextDouble() * .48D);
+                    var point = domain.position().add(x, y, z);
+
+                    BlockPos pointPos = BlockPos.containing(point);
+                    if (!mc.level.hasChunkAt(pointPos) || !mc.level.getBlockState(pointPos).isAir()) continue;
+
+                    mc.level.addParticle(
+                            Dreamstar.BOUNDARY_STAR.get(),
+                            point.x, point.y, point.z,
+                            (random.nextDouble() - .5D) * .008D,
+                            -.020D - random.nextDouble() * .035D,
+                            (random.nextDouble() - .5D) * .008D
+                    );
+                }
+            }
 
             // Large/small constellation sprites drift slowly through the interior.
             if (mc.level.getGameTime() % CONSTELLATION_SPAWN_INTERVAL == Math.floorMod(domain.getId(), CONSTELLATION_SPAWN_INTERVAL)) {
@@ -261,7 +289,7 @@ public final class DomainRenderer {
 
             // Extra cluster at the extreme tail so the trailing end sparkles more strongly.
             var tail = path.frame(30.0);
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 8; i++) {
                 var p = tail.offset((random.nextDouble() - .5) * 1.8, (random.nextDouble() - .5) * 1.4);
                 mc.level.addParticle(Dreamstar.BOUNDARY_STAR.get(), p.x, p.y, p.z,
                         (random.nextDouble() - .5) * .010,
