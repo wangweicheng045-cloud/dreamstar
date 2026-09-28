@@ -16,7 +16,8 @@ import java.io.IOException;
 @Mod.EventBusSubscriber(modid = Dreamstar.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ClientRegistration {
     @SubscribeEvent public static void particles(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(Dreamstar.BOUNDARY_STAR.get(), BoundaryStarParticle.Provider::new);\n        event.registerSpriteSet(Dreamstar.CONSTELLATION.get(), ConstellationParticle.Provider::new);
+        event.registerSpriteSet(Dreamstar.BOUNDARY_STAR.get(), BoundaryStarParticle.Provider::new);
+        event.registerSpriteSet(Dreamstar.CONSTELLATION.get(), ConstellationParticle.Provider::new);
     }
     @SubscribeEvent public static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Dreamstar.DOMAIN.get(), NoopRenderer::new);
