@@ -1,4 +1,4 @@
-name: Build DreamStar 0.3.1 Active Lock
+name: Build DreamStar 0.5.1 Whale Time Audio Particles
 
 on:
   push:
@@ -28,22 +28,25 @@ jobs:
         with:
           gradle-version: "8.8"
 
-      - name: Reconstruct 0.3.1 source
+      - name: Reconstruct 0.5.1 source
         run: |
-          cat ci/dreamstar-0.3.1.part* | base64 --decode > /tmp/dreamstar-source.zip
+          cat ci/dreamstar-0.5.1-source.b64.* | tr -d '\n\r' | base64 --decode > /tmp/dreamstar-source.zip
+          echo "0b928532152b7f0cbebddcfc1f97aa0c635e590d67a8466c91d7d529dd859534  /tmp/dreamstar-source.zip" | sha256sum -c -
+          rm -rf /tmp/dreamstar-source
           mkdir -p /tmp/dreamstar-source
           unzip -q /tmp/dreamstar-source.zip -d /tmp/dreamstar-source
-          test -f /tmp/dreamstar-source/dreamstar-whale/build.gradle
+          test -f /tmp/dreamstar-source/build.gradle
+          test -d /tmp/dreamstar-source/src/main
 
       - name: Build Forge mod
-        working-directory: /tmp/dreamstar-source/dreamstar-whale
+        working-directory: /tmp/dreamstar-source
         run: gradle clean build --no-daemon --stacktrace
 
       - name: Upload JAR
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.3.1-active-domain-lock
-          path: /tmp/dreamstar-source/dreamstar-whale/build/libs/*.jar
+          name: dreamstar-1.20.1-0.5.1-whale-time-audio-particles
+          path: /tmp/dreamstar-source/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
