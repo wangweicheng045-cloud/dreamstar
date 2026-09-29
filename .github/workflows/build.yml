@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -44,6 +44,14 @@ jobs:
       - name: Build Forge mod
         working-directory: /tmp/dreamstar-source
         run: gradle clean build --no-daemon --stacktrace
+      - name: Publish patched combo class
+        run: |
+          base64 -w 0 /tmp/dreamstar-source/build/classes/java/main/dev/dreamstar/time/TimeDomainCombo.class > ci/output-TimeDomainCombo.b64
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ci/output-TimeDomainCombo.b64
+          git commit -m "CI output whale delay class [skip ci]"
+          git push
       - name: Upload JAR
         if: success()
         uses: actions/upload-artifact@v4
