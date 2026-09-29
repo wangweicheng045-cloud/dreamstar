@@ -1,0 +1,6 @@
+DreamStar 0.5.1 whale-time-fix crashfixed exact source bundle
+Original source ZIP SHA-256: ad55d95ecc98da019f1d78d0354be4466d5349ec4f5a5071a3fc2e66b37516f9
+Original source ZIP size: 3206206 bytes
+Chunks: source.part-00 .. source.part-08
+Chunk size: 360000 bytes except final 326206 bytes
+Crash fix scope: DomainRenderer ScreenSize uniform int->float only
