@@ -1,6 +1,6 @@
 DreamStar 0.5.1 Time Crystal exact source bundle
 Base: dreamstar-source-0.5.1-ender-rework.zip
-Time Crystal source ZIP SHA-256: caedc710f9860114929191fb40188edb6ca1fcc0b37e1ef4f5eddcc4450f9903
+Time Crystal source ZIP SHA-256: 4a3be44f13fbc1aa8a3ca3b11021a43bc620f2c0931e054001057d8a2f704297
 Chunks: source.part-00 .. source.part-08
 Features:
 - Ender spell, instant cast, 20s cooldown
@@ -14,3 +14,4 @@ Features:
 - Recast launches all remaining crystals and ends the state
 - End Rod trail and impact burst
 - User BBModel adapted with the broad half as the firing head
+- Iron's 3.16.0 compatibility: impact sound Supplier signature and homing helper rename

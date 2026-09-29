@@ -19,7 +19,7 @@ jobs:
       - name: Reconstruct exact source
         run: |
           cat ci/0.5.1-time-crystal/source.part-* > /tmp/dreamstar-source-0.5.1-time-crystal.zip
-          echo "caedc710f9860114929191fb40188edb6ca1fcc0b37e1ef4f5eddcc4450f9903  /tmp/dreamstar-source-0.5.1-time-crystal.zip" | sha256sum -c -
+          echo "4a3be44f13fbc1aa8a3ca3b11021a43bc620f2c0931e054001057d8a2f704297  /tmp/dreamstar-source-0.5.1-time-crystal.zip" | sha256sum -c -
           rm -rf /tmp/dreamstar-src
           mkdir -p /tmp/dreamstar-src
           unzip -q /tmp/dreamstar-source-0.5.1-time-crystal.zip -d /tmp/dreamstar-src
