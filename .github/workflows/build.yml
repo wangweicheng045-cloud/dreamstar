@@ -37,6 +37,8 @@ jobs:
           unzip -q /tmp/dreamstar-source.zip -d /tmp/dreamstar-source
           test -f /tmp/dreamstar-source/build.gradle
           test -d /tmp/dreamstar-source/src/main
+          sed -i 's/io.redspace.ironsspellbooks.api.magic.MagicManager/io.redspace.ironsspellbooks.capabilities.magic.MagicManager/' /tmp/dreamstar-source/src/main/java/dev/dreamstar/time/TimeLockEvents.java
+          grep -q 'io.redspace.ironsspellbooks.capabilities.magic.MagicManager' /tmp/dreamstar-source/src/main/java/dev/dreamstar/time/TimeLockEvents.java
 
       - name: Build Forge mod
         working-directory: /tmp/dreamstar-source
