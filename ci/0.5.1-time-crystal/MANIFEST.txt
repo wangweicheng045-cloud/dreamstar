@@ -1,0 +1,16 @@
+DreamStar 0.5.1 Time Crystal exact source bundle
+Base: dreamstar-source-0.5.1-ender-rework.zip
+Time Crystal source ZIP SHA-256: caedc710f9860114929191fb40188edb6ca1fcc0b37e1ef4f5eddcc4450f9903
+Chunks: source.part-00 .. source.part-08
+Features:
+- Ender spell, instant cast, 20s cooldown
+- Uncommon/Rare/Epic/Legendary: 80/85/90/95 mana
+- 3/4/5/6 orbiting crystals
+- 4/6/8/10 base damage per crystal, scaled by spell + Ender power
+- 10s state with recast-bar charges
+- Equal-distance counterclockwise orbit behind head
+- Front 180 degrees, 40-block automatic homing target search
+- One crystal launches every 20 ticks from its current orbit position
+- Recast launches all remaining crystals and ends the state
+- End Rod trail and impact burst
+- User BBModel adapted with the broad half as the firing head
