@@ -28,14 +28,6 @@ jobs:
       - name: Compile
         working-directory: /tmp/src
         run: gradle clean compileJava --no-daemon --stacktrace
-      - name: Publish only whale direction class
-        run: |
-          base64 -w 0 /tmp/src/build/classes/java/main/dev/dreamstar/time/TimeDomainCombo.class > ci/output-TimeDomainCombo-direction.b64
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add ci/output-TimeDomainCombo-direction.b64
-          git commit -m "CI output whale direction class [skip ci]"
-          git push
 
       - name: Upload whale direction class
         uses: actions/upload-artifact@v4
