@@ -1,0 +1,51 @@
+name: Build DreamStar 0.5.1 Whale Time Delay
+
+on:
+  push:
+    branches: [ "build-0.5.1-whale-time-delay" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct exact 0.5.1 source
+        run: |
+          cat ci/0.5.1/source.part-* > /tmp/dreamstar-source-0.5.1-whale-time-delay.zip
+          echo "d6b950808c1b3c12a82ba589a0077a3a103554610ed9438da53a1705bb8713fe  /tmp/dreamstar-source-0.5.1-whale-time-delay.zip" | sha256sum -c -
+          mkdir -p /tmp/dreamstar-src
+          unzip -q /tmp/dreamstar-source-0.5.1-whale-time-delay.zip -d /tmp/dreamstar-src
+          test -f /tmp/dreamstar-src/dreamstar-time/build.gradle
+          test -f /tmp/dreamstar-src/dreamstar-time/src/main/resources/assets/dreamstar/sounds/whale_breach_fracture.ogg
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+
+      - name: Build Forge mod
+        working-directory: /tmp/dreamstar-src/dreamstar-time
+        run: gradle clean build -x test --no-daemon --stacktrace
+
+      - name: Upload JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-whale-time-delay
+          path: /tmp/dreamstar-src/dreamstar-time/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30

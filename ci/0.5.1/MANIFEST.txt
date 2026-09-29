@@ -1,0 +1,5 @@
+DreamStar 0.5.1 whale time-delay source bundle
+Original source ZIP SHA-256: d6b950808c1b3c12a82ba589a0077a3a103554610ed9438da53a1705bb8713fe
+Original source ZIP size: 3319330 bytes
+Chunks: source.part-00 .. source.part-09
+Chunk size: 360000 bytes except final 79330 bytes
