@@ -1,0 +1,54 @@
+name: Build DreamStar 0.5.1 Smooth Breach Effects
+
+on:
+  push:
+    branches: [ "build-0.5.1-smooth-breach-effects" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct exact modified 0.5.1 source
+        run: |
+          cat ci/0.5.1-smooth-breach-effects/source.part-* > /tmp/dreamstar-source-0.5.1-smooth-breach-effects.zip
+          echo "56dda98c6cc25f194c46badc13212e2c4308e9b54281cd1248a8f813edefea1f  /tmp/dreamstar-source-0.5.1-smooth-breach-effects.zip" | sha256sum -c -
+          mkdir -p /tmp/dreamstar-src
+          unzip -q /tmp/dreamstar-source-0.5.1-smooth-breach-effects.zip -d /tmp/dreamstar-src
+          test -f /tmp/dreamstar-src/dreamstar-time/build.gradle
+          test -f /tmp/dreamstar-src/dreamstar-time/src/main/java/dev/dreamstar/time/TimeDomainCombo.java
+          test -f /tmp/dreamstar-src/dreamstar-time/src/main/java/dev/dreamstar/time/client/TimeLockAudio.java
+          test -f /tmp/dreamstar-src/dreamstar-time/src/main/resources/assets/dreamstar/sounds/time_lock_loop.ogg
+          test -f /tmp/dreamstar-src/dreamstar-time/src/main/resources/assets/dreamstar/sounds/whale_breach_fracture.ogg
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+
+      - name: Build Forge mod
+        working-directory: /tmp/dreamstar-src/dreamstar-time
+        run: gradle clean build --no-daemon --stacktrace
+
+      - name: Upload JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-smooth-breach-effects
+          path: /tmp/dreamstar-src/dreamstar-time/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30

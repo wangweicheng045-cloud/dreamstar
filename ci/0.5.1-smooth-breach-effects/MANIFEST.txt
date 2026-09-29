@@ -1,0 +1,6 @@
+DreamStar 0.5.1 smooth-breach exact-source effects build
+Original user source: dreamstar-source-0.5.1-smooth-breach.zip
+Original user source SHA-256: 01c04faee46b96351bdcfec9e92330bc8a3e5298565f7a4094ccc62565ca4da0
+Modified source ZIP SHA-256: 56dda98c6cc25f194c46badc13212e2c4308e9b54281cd1248a8f813edefea1f
+Modified source ZIP size: 3457069 bytes
+Chunks: source.part-00 .. source.part-09
