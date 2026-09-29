@@ -1,0 +1,14 @@
+DreamStar 0.5.1 Ender rework exact source bundle
+User baseline ZIP: dreamstar-source-0.5.1-whale-time-fix.zip
+User baseline SHA-256: 0c7d2d9978514816d8b2659551b56c372f8a6fe3b2bb88adc355446415e15818
+Modified source ZIP SHA-256: b0c16a65f2c28e6d5f70e422e584433d453a429d8226d4d08602cec488bcaaa0
+Modified source ZIP size: 3182237 bytes
+Chunks: source.part-00 .. source.part-08
+Changes:
+- Time Lock school: Ice -> Ender; damage scaling follows Ender spell power
+- Dream Star Domain school: Ice -> Ender
+- Domain buff: +40% Ice spell power -> +40% Ender spell power
+- Whale shards: Frost Ray -> 20 base damage Magic Missile, domain-wide target pool, scales with generic + Ender spell power
+- Whale collision volume enlarged; freeze removed; collision damage 20, breach collision 50
+- Ending falling boundary-star particle count x10 (42 -> 420 per tick)
+- Re-applied known ScreenSize float-uniform crash fix present in prior repaired build
