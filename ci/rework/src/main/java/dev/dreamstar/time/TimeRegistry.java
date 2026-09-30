@@ -17,12 +17,14 @@ public final class TimeRegistry {
     public static final ResourceLocation TIME_LOCK_SOUND_ID=new ResourceLocation("dreamstar","time_lock_loop");
     public static final ResourceLocation WHALE_FRACTURE_SOUND_ID=new ResourceLocation("dreamstar","whale_fracture");
     public static final ResourceLocation TIME_CRYSTAL_LAUNCH_SOUND_ID=new ResourceLocation("dreamstar","time_crystal_launch");
+    public static final ResourceLocation TIME_CRYSTAL_DISAPPEAR_SOUND_ID=new ResourceLocation("dreamstar","time_crystal_disappear");
     public static final TimeLockSpell SPELL=new TimeLockSpell();
     public static final TimeCrystalSpell TIME_CRYSTAL_SPELL=new TimeCrystalSpell();
     public static final MobEffect EFFECT=new MobEffect(MobEffectCategory.HARMFUL,0xb147ef) {};
     public static final SoundEvent TIME_LOCK_SOUND=SoundEvent.createVariableRangeEvent(TIME_LOCK_SOUND_ID);
     public static final SoundEvent WHALE_FRACTURE_SOUND=SoundEvent.createVariableRangeEvent(WHALE_FRACTURE_SOUND_ID);
     public static final SoundEvent TIME_CRYSTAL_LAUNCH_SOUND=SoundEvent.createVariableRangeEvent(TIME_CRYSTAL_LAUNCH_SOUND_ID);
+    public static final SoundEvent TIME_CRYSTAL_DISAPPEAR_SOUND=SoundEvent.createVariableRangeEvent(TIME_CRYSTAL_DISAPPEAR_SOUND_ID);
     public static EntityType<TimeCrystal> CRYSTAL;
     public static EntityType<TimeFracture> FRACTURE;
     @SubscribeEvent public static void register(RegisterEvent e){
@@ -31,6 +33,7 @@ public final class TimeRegistry {
             h.register(TIME_LOCK_SOUND_ID,TIME_LOCK_SOUND);
             h.register(WHALE_FRACTURE_SOUND_ID,WHALE_FRACTURE_SOUND);
             h.register(TIME_CRYSTAL_LAUNCH_SOUND_ID,TIME_CRYSTAL_LAUNCH_SOUND);
+            h.register(TIME_CRYSTAL_DISAPPEAR_SOUND_ID,TIME_CRYSTAL_DISAPPEAR_SOUND);
         });
         e.register(ForgeRegistries.Keys.ENTITY_TYPES,h->{
             CRYSTAL=EntityType.Builder.<TimeCrystal>of(TimeCrystal::new,MobCategory.MISC)

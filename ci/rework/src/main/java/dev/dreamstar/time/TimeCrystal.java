@@ -32,6 +32,7 @@ public final class TimeCrystal extends AbstractMagicProjectile {
     private UUID homingTargetUUID;
     private Entity cachedHomingTarget;
     private int launchedTicks;
+    private boolean disappearanceSoundPlayed;
 
     public TimeCrystal(EntityType<? extends TimeCrystal> type, Level level) {
         super(type, level);
@@ -151,12 +152,12 @@ public final class TimeCrystal extends AbstractMagicProjectile {
         double distance = toTarget.length();
         if (distance < 1.0E-6D) return;
 
-        double leadTicks = Mth.clamp(distance / Math.max(speed, 0.01D), 0.0D, 8.0D);
-        Vec3 predicted = targetCenter.add(target.getDeltaMovement().scale(leadTicks * 0.55D));
+        double leadTicks = Mth.clamp(distance / Math.max(speed, 0.01D), 0.0D, 6.0D);
+        Vec3 predicted = targetCenter.add(target.getDeltaMovement().scale(leadTicks * 0.35D));
         Vec3 desired = predicted.subtract(position()).normalize();
         Vec3 current = motion.lengthSqr() < 1.0E-8D ? desired : motion.normalize();
 
-        double turn = Mth.clamp(0.10D + (launchedTicks - 3) * 0.012D, 0.10D, 0.30D);
+        double turn = Mth.clamp(0.065D + (launchedTicks - 3) * 0.008D, 0.065D, 0.18D);
         Vec3 curved = current.scale(1.0D - turn).add(desired.scale(turn));
         if (curved.lengthSqr() < 1.0E-8D) curved = desired;
         setDeltaMovement(curved.normalize().scale(speed));
@@ -200,6 +201,17 @@ public final class TimeCrystal extends AbstractMagicProjectile {
     protected void onHitBlock(BlockHitResult hit) {
         super.onHitBlock(hit);
         if (!level().isClientSide) discard();
+    }
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        if (!level().isClientSide && !disappearanceSoundPlayed
+                && (reason == Entity.RemovalReason.DISCARDED || reason == Entity.RemovalReason.KILLED)) {
+            disappearanceSoundPlayed = true;
+            level().playSound(null, getX(), getY(), getZ(), TimeRegistry.TIME_CRYSTAL_DISAPPEAR_SOUND,
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
+        }
+        super.remove(reason);
     }
 
     @Override

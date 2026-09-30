@@ -26,8 +26,6 @@ public final class TimeCrystalRenderer extends EntityRenderer<TimeCrystal> {
                     new Vector3f(0.0F, -1.0F, 0.0F),
                     new Vector3f((float)motion.x, (float)motion.y, (float)motion.z));
             pose.mulPose(aim);
-            // Slow axial roll while flying; local -Y is the broad-head firing direction.
-            pose.mulPose(new Quaternionf().rotateY((entity.tickCount + partialTick) * 0.09F));
         } else if (entity.getOwner() instanceof LivingEntity owner) {
             var look = owner.getViewVector(partialTick).normalize();
             Quaternionf aim = new Quaternionf().rotationTo(

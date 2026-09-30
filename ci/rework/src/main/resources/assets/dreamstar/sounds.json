@@ -56,5 +56,13 @@
         "stream": false
       }
     ]
+  },
+  "time_crystal_disappear": {
+    "sounds": [
+      {
+        "name": "dreamstar:time_crystal_disappear",
+        "stream": false
+      }
+    ]
   }
 }
