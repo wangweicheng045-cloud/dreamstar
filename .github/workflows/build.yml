@@ -40,6 +40,7 @@ jobs:
           # Apply the newest time-crystal implementation from the repository.
           cp src/main/java/dev/dreamstar/time/TimeCrystal.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystal.java
           cp src/main/java/dev/dreamstar/time/TimeCrystalSpell.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystalSpell.java
+          cp src/main/java/dev/dreamstar/time/TimeCrystalRecast.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystalRecast.java
           cp src/main/java/dev/dreamstar/time/TimeRegistry.java /tmp/src/src/main/java/dev/dreamstar/time/TimeRegistry.java
           cp src/main/java/dev/dreamstar/time/client/TimeCrystalRenderer.java /tmp/src/src/main/java/dev/dreamstar/time/client/TimeCrystalRenderer.java
           cp src/main/resources/assets/dreamstar/sounds.json /tmp/src/src/main/resources/assets/dreamstar/sounds.json
