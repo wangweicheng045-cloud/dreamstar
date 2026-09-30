@@ -1,0 +1,26 @@
+name: Inspect source delta
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct historical base and delta
+        run: |
+          mkdir -p /tmp/baseparts /tmp/deltaparts
+          git ls-tree -r --name-only 7b19c2d09c5996552acde8bedb4729a863ffdc3c | grep '^ci/dreamstar-0.5.1-source.b64.' | sort | while read f; do git show 7b19c2d09c5996552acde8bedb4729a863ffdc3c:"$f"; done | tr -d '\n\r' | base64 --decode > /tmp/base.zip
+          git ls-tree -r --name-only 7b19c2d09c5996552acde8bedb4729a863ffdc3c | grep '^.github/source_parts/delta.b64.' | sort | while read f; do git show 7b19c2d09c5996552acde8bedb4729a863ffdc3c:"$f"; done | tr -d '\n\r' | base64 --decode > /tmp/delta.zip
+          echo '--- BASE ZIP ---'
+          unzip -l /tmp/base.zip | head -40
+          echo '--- DELTA ZIP ---'
+          unzip -l /tmp/delta.zip
