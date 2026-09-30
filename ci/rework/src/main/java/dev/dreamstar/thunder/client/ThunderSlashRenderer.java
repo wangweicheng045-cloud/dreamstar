@@ -16,25 +16,45 @@ import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntity> {
-    private static final ResourceLocation[] FRAMES=new ResourceLocation[9];
-    static {
-        for(int i=0;i<FRAMES.length;i++) FRAMES[i]=new ResourceLocation("dreamstar",String.format("textures/effect/thunder_phantom_blade/frame_%02d.png",i+1));
+    private static final ResourceLocation TEXTURE=new ResourceLocation("dreamstar","textures/effect/thunder_phantom_blade.png");
+
+    public ThunderSlashRenderer(EntityRendererProvider.Context c){super(c);}
+
+    private static int frameIndex(ThunderSlashEntity e){
+        return java.lang.Math.min(8,java.lang.Math.max(0,(int)(e.animationAge()/2L)));
     }
-    public ThunderSlashRenderer(EntityRendererProvider.Context c){ super(c); }
-    private static int frameIndex(ThunderSlashEntity e){ return java.lang.Math.min(8,java.lang.Math.max(0,(e.tickCount-1)/2)); }
-    @Override public ResourceLocation getTextureLocation(ThunderSlashEntity e){ return FRAMES[frameIndex(e)]; }
-    @Override public void render(ThunderSlashEntity e,float yaw,float partial,PoseStack pose,MultiBufferSource buffers,int packedLight){
+
+    @Override
+    public ResourceLocation getTextureLocation(ThunderSlashEntity e){return TEXTURE;}
+
+    @Override
+    public void render(ThunderSlashEntity e,float yaw,float partial,PoseStack pose,MultiBufferSource buffers,int packedLight){
+        long age=e.animationAge();
+        if(age<0L||age>=18L)return;
+
+        int frame=frameIndex(e);
+        float v0=frame/9.0F;
+        float v1=(frame+1)/9.0F;
         float scale=e.visualScale();
-        ResourceLocation texture=getTextureLocation(e);
+
         pose.pushPose();
         pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
         pose.mulPose(Axis.YP.rotationDegrees(180.0F));
         pose.scale(scale,scale,scale);
-        VertexConsumer vc=buffers.getBuffer(RenderType.entityTranslucent(texture));
-        Matrix4f m=pose.last().pose(); Matrix3f n=pose.last().normal();
-        v(vc,m,n,-.5f,-.5f,0,1); v(vc,m,n,.5f,-.5f,1,1); v(vc,m,n,.5f,.5f,1,0); v(vc,m,n,-.5f,.5f,0,0);
+
+        VertexConsumer vc=buffers.getBuffer(RenderType.entityTranslucent(TEXTURE));
+        Matrix4f m=pose.last().pose();
+        Matrix3f n=pose.last().normal();
+        vertex(vc,m,n,-.5F,-.5F,0.0F,v1);
+        vertex(vc,m,n,.5F,-.5F,1.0F,v1);
+        vertex(vc,m,n,.5F,.5F,1.0F,v0);
+        vertex(vc,m,n,-.5F,.5F,0.0F,v0);
         pose.popPose();
+
         super.render(e,yaw,partial,pose,buffers,LightTexture.FULL_BRIGHT);
     }
-    private static void v(VertexConsumer vc,Matrix4f m,Matrix3f n,float x,float y,float u,float v){ vc.vertex(m,x,y,0).color(255,255,255,255).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(n,0,0,1).endVertex(); }
+
+    private static void vertex(VertexConsumer vc,Matrix4f m,Matrix3f n,float x,float y,float u,float v){
+        vc.vertex(m,x,y,0.0F).color(255,255,255,255).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(n,0,0,1).endVertex();
+    }
 }
