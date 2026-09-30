@@ -18,34 +18,56 @@ public final class ThunderSlashEntity extends Entity {
     private static final EntityDataAccessor<Integer> TARGET_ID=SynchedEntityData.defineId(ThunderSlashEntity.class,EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> DAMAGE=SynchedEntityData.defineId(ThunderSlashEntity.class,EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> VISUAL_SCALE=SynchedEntityData.defineId(ThunderSlashEntity.class,EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Long> ANIMATION_START_TICK=SynchedEntityData.defineId(ThunderSlashEntity.class,EntityDataSerializers.LONG);
     private UUID ownerUuid;
-    public ThunderSlashEntity(EntityType<? extends ThunderSlashEntity> type, Level level){ super(type,level); noPhysics=true; }
-    @Override protected void defineSynchedData(){ entityData.define(TARGET_ID,-1); entityData.define(DAMAGE,0F); entityData.define(VISUAL_SCALE,1.15F); }
-    public void initialize(LivingEntity target, LivingEntity owner, float damage){
+    private boolean damageApplied;
+    public ThunderSlashEntity(EntityType<? extends ThunderSlashEntity> type, Level level){super(type,level);noPhysics=true;}
+    @Override protected void defineSynchedData(){entityData.define(TARGET_ID,-1);entityData.define(DAMAGE,0F);entityData.define(VISUAL_SCALE,1.15F);entityData.define(ANIMATION_START_TICK,0L);}
+    public void initialize(LivingEntity target,LivingEntity owner,float damage){
         entityData.set(TARGET_ID,target.getId());
         entityData.set(DAMAGE,damage);
         entityData.set(VISUAL_SCALE,java.lang.Math.max(1.15F,java.lang.Math.max(target.getBbHeight(),target.getBbWidth())*1.35F));
+        entityData.set(ANIMATION_START_TICK,level().getGameTime()+2L);
         ownerUuid=owner.getUUID();
         Vec3 c=target.getBoundingBox().getCenter();
         setPos(c.x,c.y,c.z);
     }
-    public int targetId(){ return entityData.get(TARGET_ID); }
-    public LivingEntity target(){ Entity e=level().getEntity(targetId()); return e instanceof LivingEntity l?l:null; }
-    public float visualScale(){ return entityData.get(VISUAL_SCALE); }
-    private LivingEntity owner(){ if(ownerUuid==null || !(level() instanceof ServerLevel s)) return null; Entity e=s.getEntity(ownerUuid); return e instanceof LivingEntity l?l:null; }
-    public boolean matchesTarget(int id){ return targetId()==id && !isRemoved(); }
+    public int targetId(){return entityData.get(TARGET_ID);}
+    public LivingEntity target(){Entity e=level().getEntity(targetId());return e instanceof LivingEntity l?l:null;}
+    public float visualScale(){return entityData.get(VISUAL_SCALE);}
+    public long animationAge(){return level().getGameTime()-entityData.get(ANIMATION_START_TICK);}
+    private LivingEntity owner(){if(ownerUuid==null||!(level() instanceof ServerLevel s))return null;Entity e=s.getEntity(ownerUuid);return e instanceof LivingEntity l?l:null;}
+    public boolean matchesTarget(int id){return targetId()==id&&!isRemoved();}
     @Override public void tick(){
         super.tick();
-        LivingEntity t=target();
-        if(!level().isClientSide && tickCount==7 && t!=null && t.isAlive() && !t.isRemoved()){
-            LivingEntity o=owner();
-            if(o!=null && o.isAlive()){
-                DamageSources.applyDamage(t,entityData.get(DAMAGE),ThunderRegistry.SPELL.getDamageSource(this,o));
-                t.invulnerableTime=0;
+        long age=animationAge();
+        if(!level().isClientSide&&!damageApplied&&age>=6L){
+            damageApplied=true;
+            LivingEntity t=target();
+            if(t!=null&&t.isAlive()&&!t.isRemoved()){
+                LivingEntity o=owner();
+                if(o!=null&&o.isAlive()){
+                    DamageSources.applyDamage(t,entityData.get(DAMAGE),ThunderRegistry.SPELL.getDamageSource(this,o));
+                    t.invulnerableTime=0;
+                }
             }
         }
-        if(tickCount>=18) discard();
+        if(age>=18L)discard();
     }
-    @Override protected void readAdditionalSaveData(CompoundTag tag){ if(tag.hasUUID("Owner")) ownerUuid=tag.getUUID("Owner"); entityData.set(TARGET_ID,tag.getInt("Target")); entityData.set(DAMAGE,tag.getFloat("Damage")); entityData.set(VISUAL_SCALE,tag.contains("VisualScale")?tag.getFloat("VisualScale"):1.15F); }
-    @Override protected void addAdditionalSaveData(CompoundTag tag){ if(ownerUuid!=null) tag.putUUID("Owner",ownerUuid); tag.putInt("Target",targetId()); tag.putFloat("Damage",entityData.get(DAMAGE)); tag.putFloat("VisualScale",visualScale()); }
+    @Override protected void readAdditionalSaveData(CompoundTag tag){
+        if(tag.hasUUID("Owner"))ownerUuid=tag.getUUID("Owner");
+        entityData.set(TARGET_ID,tag.getInt("Target"));
+        entityData.set(DAMAGE,tag.getFloat("Damage"));
+        entityData.set(VISUAL_SCALE,tag.contains("VisualScale")?tag.getFloat("VisualScale"):1.15F);
+        entityData.set(ANIMATION_START_TICK,tag.getLong("AnimationStartTick"));
+        damageApplied=tag.getBoolean("DamageApplied");
+    }
+    @Override protected void addAdditionalSaveData(CompoundTag tag){
+        if(ownerUuid!=null)tag.putUUID("Owner",ownerUuid);
+        tag.putInt("Target",targetId());
+        tag.putFloat("Damage",entityData.get(DAMAGE));
+        tag.putFloat("VisualScale",visualScale());
+        tag.putLong("AnimationStartTick",entityData.get(ANIMATION_START_TICK));
+        tag.putBoolean("DamageApplied",damageApplied);
+    }
 }
