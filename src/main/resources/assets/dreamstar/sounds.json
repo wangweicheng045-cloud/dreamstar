@@ -1,0 +1,60 @@
+{
+  "domain_cast": {
+    "sounds": [
+      {
+        "name": "dreamstar:domain_cast",
+        "stream": true
+      }
+    ]
+  },
+  "domain_end": {
+    "sounds": [
+      {
+        "name": "dreamstar:domain_end",
+        "stream": true
+      }
+    ]
+  },
+  "whale_high": {
+    "sounds": [
+      {
+        "name": "dreamstar:whale_high",
+        "stream": true,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "whale_mid": {
+    "sounds": [
+      {
+        "name": "dreamstar:whale_mid",
+        "stream": true,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "time_lock_loop": {
+    "sounds": [
+      {
+        "name": "dreamstar:time_lock_loop",
+        "stream": false
+      }
+    ]
+  },
+  "whale_fracture": {
+    "sounds": [
+      {
+        "name": "dreamstar:whale_fracture",
+        "stream": false
+      }
+    ]
+  },
+  "time_crystal_launch": {
+    "sounds": [
+      {
+        "name": "dreamstar:time_crystal_launch",
+        "stream": false
+      }
+    ]
+  }
+}
