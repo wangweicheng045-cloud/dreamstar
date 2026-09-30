@@ -8,7 +8,8 @@ import net.minecraft.client.renderer.entity.*;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import org.joml.*;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntity>{
     private static final ResourceLocation TEXTURE=new ResourceLocation("dreamstar","textures/effect/thunder_phantom_blade.png");
     public ThunderSlashRenderer(EntityRendererProvider.Context c){super(c);}
