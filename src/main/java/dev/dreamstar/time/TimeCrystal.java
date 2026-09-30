@@ -125,7 +125,7 @@ public final class TimeCrystal extends AbstractMagicProjectile {
         if (livingTarget == null || !TimeCrystalSpell.isTrackingTarget(owner, livingTarget, position())) {
             clearHomingTarget();
             livingTarget = TimeCrystalSpell.findTrackingTarget(owner, position());
-            if (livingTarget != null) setHomingTarget(livingTarget);
+            if (livingTarget != null) rememberHomingTarget(livingTarget);
         }
 
         // Keep the first couple of ticks visibly centred on the caster's forward line,
@@ -135,7 +135,7 @@ public final class TimeCrystal extends AbstractMagicProjectile {
         }
     }
 
-    private void setHomingTarget(LivingEntity target) {
+    private void rememberHomingTarget(LivingEntity target) {
         homingTargetUUID = target.getUUID();
         cachedHomingTarget = target;
     }
