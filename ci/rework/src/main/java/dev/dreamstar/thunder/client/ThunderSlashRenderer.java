@@ -2,6 +2,7 @@ package dev.dreamstar.thunder.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import dev.dreamstar.thunder.ThunderSlashEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -36,6 +37,7 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
         } else {
             pose.pushPose();
             pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+            pose.mulPose(Axis.YP.rotationDegrees(180.0F));
             renderBillboardSheetQuad(pose, buffers, TARGET_TEXTURE, e.visualScale() * 3.0F,
                     e.targetFrame(partialTick), ThunderSlashEntity.TARGET_FRAME_COUNT, 255);
             pose.popPose();
@@ -56,10 +58,10 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
                 : new Vec3(0.0D, 1.0D, 0.0D);
         Vec3 right = forward.cross(referenceUp).normalize();
 
-        // Flaming Strike uses the forward/right plane. Rotating that plane's texture basis
-        // 90 degrees to the caster's right makes this animation sweep left -> right.
-        Vec3 primary = right;
-        Vec3 secondary = forward.scale(-1.0D);
+        // Keep the slash plane aligned to the caster's full view like Flaming Strike.
+        // The texture's long axis now runs front <-> back instead of left <-> right.
+        Vec3 primary = forward;
+        Vec3 secondary = right;
 
         Vec3 p0 = primary.scale(-half).add(secondary.scale(-half));
         Vec3 p1 = primary.scale(-half).add(secondary.scale( half));
