@@ -1,0 +1,356 @@
+name: Build domain abort time-lock thunder combo
+
+on:
+  push:
+    branches: [ "build-0.5.1-domain-abort-timelock-thunder-combo" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct latest source and apply scoped patch
+        run: |
+          cat ci/0.5.1-time-crystal/source.part-* > /tmp/base.zip
+          echo "4a3be44f13fbc1aa8a3ca3b11021a43bc620f2c0931e054001057d8a2f704297  /tmp/base.zip" | sha256sum -c -
+          rm -rf /tmp/src && mkdir -p /tmp/src
+          unzip -q /tmp/base.zip -d /tmp/src
+          PROJECT_DIR="$(dirname "$(find /tmp/src -maxdepth 3 -name build.gradle -print -quit)")"
+          cp -a ci/rework/src/. "$PROJECT_DIR/src/"
+          export PROJECT_DIR
+          python3 - <<'PY'
+          import os, json
+          from pathlib import Path
+          root=Path(os.environ["PROJECT_DIR"])
+
+          p=root/"src/main/java/dev/dreamstar/domain/DomainEntity.java"
+          s=p.read_text()
+          s=s.replace('private static final EntityDataAccessor<Float> RADIUS = SynchedEntityData.defineId(DomainEntity.class, (EntityDataSerializer)EntityDataSerializers.FLOAT);',
+          '''private static final EntityDataAccessor<Float> RADIUS = SynchedEntityData.defineId(DomainEntity.class, (EntityDataSerializer)EntityDataSerializers.FLOAT);
+              private static final EntityDataAccessor<Long> END_TICK = SynchedEntityData.defineId(DomainEntity.class, (EntityDataSerializer)EntityDataSerializers.LONG);
+              private static final EntityDataAccessor<Boolean> ABORTING = SynchedEntityData.defineId(DomainEntity.class, (EntityDataSerializer)EntityDataSerializers.BOOLEAN);''')
+          s=s.replace('this.entityData.set(RADIUS, Float.valueOf(radius));\n        this.ownerUUID = ownerUUID;',
+          '''this.entityData.set(RADIUS, Float.valueOf(radius));
+                  this.entityData.set(END_TICK, this.level().getGameTime() + DomainTiming.DURATION);
+                  this.entityData.set(ABORTING, false);
+                  this.ownerUUID = ownerUUID;''')
+          s=s.replace('    public UUID ownerUUID() {\n        return this.ownerUUID;\n    }',
+          '''    public UUID ownerUUID() {
+                  return this.ownerUUID;
+              }
+
+              public long endTick() {
+                  return (Long)this.entityData.get(END_TICK);
+              }
+
+              public boolean aborting() {
+                  return (Boolean)this.entityData.get(ABORTING);
+              }
+
+              public long remainingTicks(long now) {
+                  return Math.max(0L, this.endTick() - now);
+              }''')
+          s=s.replace('    public float opacity(float partialTick) {\n        return DomainTiming.opacity((float)this.level().getGameTime() + partialTick, this.startTick());\n    }',
+          '''    public float opacity(float partialTick) {
+                  double now = (double)this.level().getGameTime() + partialTick;
+                  if (this.aborting()) {
+                      return (float)Math.max(0.0, Math.min(1.0, ((double)this.endTick() - now) / 20.0));
+                  }
+                  return DomainTiming.opacity(now, this.startTick());
+              }''')
+          s=s.replace('this.entityData.define(RADIUS, Float.valueOf(40.0f));',
+          '''this.entityData.define(RADIUS, Float.valueOf(40.0f));
+                  this.entityData.define(END_TICK, 0L);
+                  this.entityData.define(ABORTING, false);''')
+          start=s.index('    public void tick() {')
+          end=s.index('    private void tickCasterBlessing()',start)
+          s=s[:start]+'''    public void tick() {
+                  super.tick();
+                  if (!this.level().isClientSide && this.level() instanceof ServerLevel server) {
+                      long now = this.level().getGameTime();
+                      if (!this.aborting()) {
+                          Entity rawCaster = this.casterUUID() == null ? null : server.getEntity(this.casterUUID());
+                          if (!(rawCaster instanceof LivingEntity caster) || !caster.isAlive() || caster.isRemoved()) {
+                              this.beginAbort(server);
+                          }
+                      }
+                      if (now >= this.endTick()) {
+                          DomainFamilyLock.clearActiveDomain(server, this.ownerUUID);
+                          this.discard();
+                          return;
+                      }
+                      if (!this.aborting()) {
+                          this.tickCasterBlessing();
+                      }
+                      Level level;
+                      if (this.ownerUUID != null && this.whaleActive() && (level = this.level()) instanceof ServerLevel) {
+                          StarWhaleEntity whale;
+                          Entity current;
+                          Entity entity = current = this.whaleUUID == null ? null : server.getEntity(this.whaleUUID);
+                          if ((current == null || current.isRemoved()) && (whale = (StarWhaleEntity)Dreamstar.STAR_WHALE.get().create(this.level())) != null) {
+                              whale.initialize(this);
+                              if (server.addFreshEntity(whale)) {
+                                  this.whaleUUID = whale.getUUID();
+                              }
+                          }
+                      }
+                  }
+              }
+
+              private void beginAbort(ServerLevel server) {
+                  if (this.aborting()) return;
+                  this.entityData.set(ABORTING, true);
+                  this.entityData.set(END_TICK, server.getGameTime() + 60L);
+                  DomainFamilyLock.clearActiveDomain(server, this.ownerUUID);
+              }
+
+          '''+s[end:]
+          s=s.replace('return this.level().getGameTime() - this.startTick() < 1180L;','return !this.aborting() && this.level().getGameTime() - this.startTick() < 1180L;')
+          s=s.replace('this.ownerUUID = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;\n        this.casterUUID = tag.hasUUID("Caster") ? tag.getUUID("Caster") : this.ownerUUID;',
+          '''this.ownerUUID = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
+                  this.casterUUID = tag.hasUUID("Caster") ? tag.getUUID("Caster") : this.ownerUUID;
+                  this.entityData.set(END_TICK, tag.contains("EndTick") ? tag.getLong("EndTick") : this.startTick() + DomainTiming.DURATION);
+                  this.entityData.set(ABORTING, tag.getBoolean("Aborting"));''')
+          s=s.replace('tag.putFloat("Radius", this.radius());','tag.putFloat("Radius", this.radius());\n        tag.putLong("EndTick", this.endTick());\n        tag.putBoolean("Aborting", this.aborting());')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/domain/DomainFamilyLock.java"
+          s=p.read_text()
+          needle='''        data.activeUntil.merge(familyId, until, Math::max);
+                  data.setDirty();
+              }
+
+              @Deprecated'''
+          repl='''        data.activeUntil.merge(familyId, until, Math::max);
+                  data.setDirty();
+              }
+
+              public static void clearActiveDomain(ServerLevel level, UUID familyId) {
+                  if (familyId == null) return;
+                  DomainFamilyLock data = DomainFamilyLock.get(level);
+                  if (data.activeUntil.remove(familyId) != null) data.setDirty();
+              }
+
+              @Deprecated'''
+          if needle not in s: raise SystemExit("family lock anchor missing")
+          p.write_text(s.replace(needle,repl))
+
+          p=root/"src/main/java/dev/dreamstar/client/DomainRenderer.java"
+          s=p.read_text().replace('long remainingTicks = domain.startTick() + 1200L - mc.level.getGameTime();','long remainingTicks = domain.endTick() - mc.level.getGameTime();')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/client/DreamStarCinematicController.java"
+          s=p.read_text()
+          s=s.replace('private static final ResourceLocation END_AUDIO = new ResourceLocation("dreamstar", "domain_end");',
+                      'private static final ResourceLocation END_AUDIO = new ResourceLocation("dreamstar", "domain_end");\n    private static final ResourceLocation ABORT_AUDIO = new ResourceLocation("dreamstar", "domain_abort");')
+          s=s.replace('private static final Set<Integer> endingAudioStarted = new HashSet<Integer>();',
+                      'private static final Set<Integer> endingAudioStarted = new HashSet<Integer>();\n    private static final Set<Integer> abortAudioStarted = new HashSet<Integer>();')
+          s=s.replace('(remaining = domain.startTick() + 1200L - now)', '(remaining = domain.endTick() - now)')
+          old='''            if (bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {
+                          DreamStarCinematicController.playWhaleCall(mc, containing);
+                          nextWhaleCallTick = now + 400L + (long)mc.level.random.nextInt(201);
+                      }
+                      if (bestRemaining <= 152L && bestRemaining > 0L && !endingAudioStarted.contains(containing.getId()) && pendingDomainEndTick == Long.MIN_VALUE) {
+                          endingAudioStarted.add(containing.getId());
+                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)END_AUDIO), (float)1.0f, (float)1.0f);
+                          mc.getSoundManager().play(endAudio);
+                          pendingDomainEndTick = containing.startTick() + 1200L;
+                          pendingDomainEndTriggered = false;
+                      }'''
+          new='''            if (!containing.aborting() && bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {
+                          DreamStarCinematicController.playWhaleCall(mc, containing);
+                          nextWhaleCallTick = now + 400L + (long)mc.level.random.nextInt(201);
+                      }
+                      if (containing.aborting() && !abortAudioStarted.contains(containing.getId())) {
+                          abortAudioStarted.add(containing.getId());
+                          if (endAudio != null) mc.getSoundManager().stop(endAudio);
+                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)ABORT_AUDIO), (float)1.0f, (float)1.0f);
+                          mc.getSoundManager().play(endAudio);
+                          pendingDomainEndTick = containing.endTick();
+                          pendingDomainEndTriggered = false;
+                      } else if (!containing.aborting() && bestRemaining <= 152L && bestRemaining > 0L && !endingAudioStarted.contains(containing.getId()) && pendingDomainEndTick == Long.MIN_VALUE) {
+                          endingAudioStarted.add(containing.getId());
+                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)END_AUDIO), (float)1.0f, (float)1.0f);
+                          mc.getSoundManager().play(endAudio);
+                          pendingDomainEndTick = containing.endTick();
+                          pendingDomainEndTriggered = false;
+                      }'''
+          if old not in s: raise SystemExit("cinematic end block anchor missing")
+          s=s.replace(old,new).replace('endingAudioStarted.clear();','endingAudioStarted.clear();\n        abortAudioStarted.clear();')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/time/TimeLockState.java"
+          s=p.read_text()
+          if 'import dev.dreamstar.Dreamstar;' not in s: s=s.replace('package dev.dreamstar.time;\n','package dev.dreamstar.time;\n\nimport dev.dreamstar.Dreamstar;')
+          s=s.replace('''        var domain=TimeDomainCombo.containing(e);
+                  if(domain!=null){''','''        var domain=TimeDomainCombo.containing(e);
+                  boolean combo=n.getBoolean("domainCombo");
+                  if(combo&&domain!=null){''')
+          old='''        var domain=TimeDomainCombo.containing(target);
+                  if(domain!=null){n.putBoolean("domainHeld",true);n.putUUID("domain",domain.getUUID());n.putLong("end",Long.MAX_VALUE);n.putLong("whaleTargetAt",target.level().getGameTime()+40);}
+                  target.getPersistentData().put(KEY,n);
+                  target.stopRiding();target.stopUsingItem();
+                  if(!target.addEffect(new MobEffectInstance(TimeRegistry.EFFECT,domain!=null?-1:TimeLockSpell.duration(level),0,false,false,true))){target.getPersistentData().remove(KEY);return false;}'''
+          new='''        var domain=TimeDomainCombo.containing(target);
+                  var casterDomain=TimeDomainCombo.containing(caster);
+                  boolean domainCombo=domain!=null&&casterDomain!=null&&casterDomain.getUUID().equals(domain.getUUID())
+                          &&caster.hasEffect(Dreamstar.DREAM_STAR_DOMAIN_EFFECT.get());
+                  n.putBoolean("domainCombo",domainCombo);
+                  if(domainCombo){n.putBoolean("domainHeld",true);n.putUUID("domain",domain.getUUID());n.putLong("end",Long.MAX_VALUE);n.putLong("whaleTargetAt",target.level().getGameTime()+40);}
+                  target.getPersistentData().put(KEY,n);
+                  target.stopRiding();target.stopUsingItem();
+                  if(!target.addEffect(new MobEffectInstance(TimeRegistry.EFFECT,domainCombo?-1:TimeLockSpell.duration(level),0,false,false,true))){target.getPersistentData().remove(KEY);return false;}'''
+          if old not in s: raise SystemExit("timelock apply anchor missing")
+          s=s.replace(old,new)
+          s=s.replace('''        // Ordinary expiry/collision callers cannot release a victim in a live domain.
+                  if(TimeDomainCombo.containing(e)!=null)return;
+                  settle(e,multiplier);''','''        // Only explicit Dream Star Domain combo locks are protected from ordinary expiry.
+                  var n=e.getPersistentData().getCompound(KEY);
+                  if(n.getBoolean("domainCombo")&&TimeDomainCombo.containing(e)!=null)return;
+                  settle(e,multiplier);''')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/time/TimeDomainCombo.java"
+          s=p.read_text().replace('''        var n=target.getPersistentData().getCompound(TimeLockState.KEY);
+                  if(n.contains("whaleTargetAt")&&whale.level().getGameTime()<n.getLong("whaleTargetAt"))return false;''',
+          '''        var n=target.getPersistentData().getCompound(TimeLockState.KEY);
+                  if(!n.getBoolean("domainCombo"))return false;
+                  if(n.contains("whaleTargetAt")&&whale.level().getGameTime()<n.getLong("whaleTargetAt"))return false;''')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/thunder/ThunderSlashEntity.java"
+          s=p.read_text()
+          s=s.replace('private static final int TARGET_DELAY_TICKS = 20;\n    private static final int TARGET_ANIM_TICKS = 18;\n    private static final int TARGET_DAMAGE_TICK = 6;',
+          '''private static final int TARGET_DELAY_TICKS = 8;
+              public static final int TARGET_FRAME_COUNT = 7;
+              public static final int TARGET_SLASH_TICKS = 14;
+              private static final int TARGET_VISUAL_TICKS = 20;
+              private static final int TARGET_DAMAGE_TICK = 6;''')
+          s=s.replace('public int animationFrames() { return mode() == MODE_OPENING_SLASH ? OPENING_FRAME_COUNT : 9; }','public int animationFrames() { return mode() == MODE_OPENING_SLASH ? OPENING_FRAME_COUNT : TARGET_FRAME_COUNT; }')
+          s=s.replace('public int animationDuration() { return mode() == MODE_OPENING_SLASH ? OPENING_ANIM_TICKS : TARGET_ANIM_TICKS; }','public int animationDuration() { return mode() == MODE_OPENING_SLASH ? OPENING_ANIM_TICKS : TARGET_VISUAL_TICKS; }')
+          s=s.replace('if (age >= TARGET_ANIM_TICKS) discard();','if (age >= TARGET_VISUAL_TICKS) discard();')
+          p.write_text(s)
+
+          p=root/"src/main/java/dev/dreamstar/thunder/client/ThunderSlashRenderer.java"
+          p.write_text(r'''package dev.dreamstar.thunder.client;
+
+          import com.mojang.blaze3d.vertex.PoseStack;
+          import com.mojang.blaze3d.vertex.VertexConsumer;
+          import com.mojang.math.Axis;
+          import dev.dreamstar.thunder.ThunderSlashEntity;
+          import net.minecraft.client.Minecraft;
+          import net.minecraft.client.renderer.LightTexture;
+          import net.minecraft.client.renderer.MultiBufferSource;
+          import net.minecraft.client.renderer.RenderType;
+          import net.minecraft.client.renderer.entity.EntityRenderer;
+          import net.minecraft.client.renderer.entity.EntityRendererProvider;
+          import net.minecraft.client.renderer.texture.OverlayTexture;
+          import net.minecraft.resources.ResourceLocation;
+          import net.minecraft.util.Mth;
+          import org.joml.Matrix3f;
+          import org.joml.Matrix4f;
+
+          public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntity> {
+              private static final ResourceLocation TARGET_TEXTURE = new ResourceLocation("dreamstar", "textures/effect/thunder_phantom_blade.png");
+              private static final ResourceLocation OPENING_TEXTURE = new ResourceLocation("dreamstar", "textures/effect/thunder_cast_slash.png");
+              private static final ResourceLocation[] COMBO_PARTICLES = new ResourceLocation[]{
+                      new ResourceLocation("dreamstar", "textures/particle/thunder_combo_1.png"),
+                      new ResourceLocation("dreamstar", "textures/particle/thunder_combo_2.png"),
+                      new ResourceLocation("dreamstar", "textures/particle/thunder_combo_3.png")
+              };
+              private static final float[][] PARTICLE_LAYOUT = new float[][]{
+                      {-0.75F,0.42F,0.42F,-12F},{0.62F,0.55F,0.36F,18F},{-0.18F,0.82F,0.31F,42F},
+                      {0.84F,-0.08F,0.34F,-28F},{-0.65F,-0.20F,0.30F,28F},{0.12F,-0.55F,0.38F,-5F},
+                      {-0.92F,0.06F,0.28F,55F},{0.38F,0.17F,0.33F,-44F},{-0.30F,0.28F,0.27F,8F},
+                      {0.92F,0.32F,0.26F,31F},{-0.48F,0.66F,0.25F,-33F},{0.55F,-0.48F,0.29F,48F}
+              };
+
+              public ThunderSlashRenderer(EntityRendererProvider.Context c){ super(c); }
+              @Override public ResourceLocation getTextureLocation(ThunderSlashEntity e){ return e.mode()==ThunderSlashEntity.MODE_OPENING_SLASH?OPENING_TEXTURE:TARGET_TEXTURE; }
+
+              @Override public void render(ThunderSlashEntity e,float yaw,float partialTick,PoseStack pose,MultiBufferSource buffers,int packedLight){
+                  long age=e.animationAge();
+                  if(age<0L||age>=e.animationDuration())return;
+                  pose.pushPose();
+                  pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+                  pose.mulPose(Axis.YP.rotationDegrees(180.0F));
+                  if(e.mode()==ThunderSlashEntity.MODE_OPENING_SLASH){
+                      renderSheetQuad(pose,buffers,OPENING_TEXTURE,e.visualScale(),e.openingFrame(partialTick),ThunderSlashEntity.OPENING_FRAME_COUNT,255);
+                  }else{
+                      float baseScale=e.visualScale();
+                      if(age<ThunderSlashEntity.TARGET_SLASH_TICKS){
+                          int frame=Math.min(ThunderSlashEntity.TARGET_FRAME_COUNT-1,Math.max(0,(int)(age/2L)));
+                          renderSheetQuad(pose,buffers,TARGET_TEXTURE,baseScale*3.0F,frame,ThunderSlashEntity.TARGET_FRAME_COUNT,255);
+                      }
+                      renderComboParticles(pose,buffers,baseScale,age+partialTick);
+                  }
+                  pose.popPose();
+                  super.render(e,yaw,partialTick,pose,buffers,LightTexture.FULL_BRIGHT);
+              }
+
+              private static void renderComboParticles(PoseStack pose,MultiBufferSource buffers,float baseScale,float age){
+                  if(age<0F||age>=20F)return;
+                  float life=age/20F;
+                  int alpha=Mth.clamp((int)((life<0.15F?life/0.15F:(1F-life)/0.85F)*220F),0,220);
+                  float drift=0.18F*life;
+                  for(int i=0;i<PARTICLE_LAYOUT.length;i++){
+                      float[] v=PARTICLE_LAYOUT[i];
+                      pose.pushPose();
+                      float pulse=1F+0.12F*(float)Math.sin((age+i*1.7F)*0.65F);
+                      pose.translate(v[0]*baseScale*(1F+drift),v[1]*baseScale*(1F+drift),0.01F+i*0.0005F);
+                      pose.mulPose(Axis.ZP.rotationDegrees(v[3]+age*(i%2==0?1.8F:-1.4F)));
+                      float scale=baseScale*v[2]*pulse;
+                      pose.scale(scale,scale,scale);
+                      renderFullQuad(pose,buffers,COMBO_PARTICLES[i%COMBO_PARTICLES.length],alpha);
+                      pose.popPose();
+                  }
+              }
+              private static void renderSheetQuad(PoseStack pose,MultiBufferSource buffers,ResourceLocation texture,float scale,int frame,int frames,int alpha){
+                  pose.pushPose(); pose.scale(scale,scale,scale);
+                  float v0=frame/(float)frames,v1=(frame+1)/(float)frames;
+                  VertexConsumer vc=buffers.getBuffer(RenderType.entityTranslucent(texture));
+                  Matrix4f m=pose.last().pose(); Matrix3f n=pose.last().normal();
+                  vertex(vc,m,n,-.5F,-.5F,0F,v1,alpha); vertex(vc,m,n,.5F,-.5F,1F,v1,alpha);
+                  vertex(vc,m,n,.5F,.5F,1F,v0,alpha); vertex(vc,m,n,-.5F,.5F,0F,v0,alpha);
+                  pose.popPose();
+              }
+              private static void renderFullQuad(PoseStack pose,MultiBufferSource buffers,ResourceLocation texture,int alpha){
+                  VertexConsumer vc=buffers.getBuffer(RenderType.entityTranslucent(texture));
+                  Matrix4f m=pose.last().pose(); Matrix3f n=pose.last().normal();
+                  vertex(vc,m,n,-.5F,-.5F,0F,1F,alpha); vertex(vc,m,n,.5F,-.5F,1F,1F,alpha);
+                  vertex(vc,m,n,.5F,.5F,1F,0F,alpha); vertex(vc,m,n,-.5F,.5F,0F,0F,alpha);
+              }
+              private static void vertex(VertexConsumer vc,Matrix4f m,Matrix3f n,float x,float y,float u,float v,int alpha){
+                  vc.vertex(m,x,y,0F).color(255,255,255,alpha).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(n,0,0,1).endVertex();
+              }
+          }
+          ''')
+
+          p=root/"src/main/resources/assets/dreamstar/sounds.json"
+          data=json.loads(p.read_text())
+          data["domain_abort"]={"sounds":[{"name":"dreamstar:domain_abort","stream":True}]}
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
+          PY
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+      - name: Build Forge mod
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle clean build -x test --no-daemon --stacktrace
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-domain-abort-timelock-thunder-combo
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
