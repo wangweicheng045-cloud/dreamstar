@@ -151,36 +151,30 @@ jobs:
           s=s.replace('private static final Set<Integer> endingAudioStarted = new HashSet<Integer>();',
                       'private static final Set<Integer> endingAudioStarted = new HashSet<Integer>();\n    private static final Set<Integer> abortAudioStarted = new HashSet<Integer>();')
           s=s.replace('(remaining = domain.startTick() + 1200L - now)', '(remaining = domain.endTick() - now)')
-          old='''            if (bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {
-                          DreamStarCinematicController.playWhaleCall(mc, containing);
-                          nextWhaleCallTick = now + 400L + (long)mc.level.random.nextInt(201);
-                      }
-                      if (bestRemaining <= 152L && bestRemaining > 0L && !endingAudioStarted.contains(containing.getId()) && pendingDomainEndTick == Long.MIN_VALUE) {
+          s=s.replace('if (bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {',
+                      'if (!containing.aborting() && bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {')
+          old='''            if (bestRemaining <= 152L && bestRemaining > 0L && !endingAudioStarted.contains(containing.getId()) && pendingDomainEndTick == Long.MIN_VALUE) {
                           endingAudioStarted.add(containing.getId());
-                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)END_AUDIO), (float)1.0f, (float)1.0f);
+                          endAudio = SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(END_AUDIO), 1.0f, 1.0f);
                           mc.getSoundManager().play(endAudio);
                           pendingDomainEndTick = containing.startTick() + 1200L;
                           pendingDomainEndTriggered = false;
                       }'''
-          new='''            if (!containing.aborting() && bestRemaining > 152L && pendingDomainEndTick == Long.MIN_VALUE && now >= nextWhaleCallTick) {
-                          DreamStarCinematicController.playWhaleCall(mc, containing);
-                          nextWhaleCallTick = now + 400L + (long)mc.level.random.nextInt(201);
-                      }
-                      if (containing.aborting() && !abortAudioStarted.contains(containing.getId())) {
+          new='''            if (containing.aborting() && !abortAudioStarted.contains(containing.getId())) {
                           abortAudioStarted.add(containing.getId());
                           if (endAudio != null) mc.getSoundManager().stop(endAudio);
-                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)ABORT_AUDIO), (float)1.0f, (float)1.0f);
+                          endAudio = SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(ABORT_AUDIO), 1.0f, 1.0f);
                           mc.getSoundManager().play(endAudio);
                           pendingDomainEndTick = containing.endTick();
                           pendingDomainEndTriggered = false;
                       } else if (!containing.aborting() && bestRemaining <= 152L && bestRemaining > 0L && !endingAudioStarted.contains(containing.getId()) && pendingDomainEndTick == Long.MIN_VALUE) {
                           endingAudioStarted.add(containing.getId());
-                          endAudio = SimpleSoundInstance.forUI((SoundEvent)SoundEvent.createVariableRangeEvent((ResourceLocation)END_AUDIO), (float)1.0f, (float)1.0f);
+                          endAudio = SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(END_AUDIO), 1.0f, 1.0f);
                           mc.getSoundManager().play(endAudio);
                           pendingDomainEndTick = containing.endTick();
                           pendingDomainEndTriggered = false;
                       }'''
-          if old not in s: raise SystemExit("cinematic end block anchor missing")
+          if old not in s: raise SystemExit("cinematic normal end block anchor missing")
           s=s.replace(old,new).replace('endingAudioStarted.clear();','endingAudioStarted.clear();\n        abortAudioStarted.clear();')
           p.write_text(s)
 
