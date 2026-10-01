@@ -1,8 +1,8 @@
-name: Build thunder axis restore buff
+name: Build thunder caster anchor fix
 
 on:
   push:
-    branches: [ "build-0.5.1-thunder-axis-restore-buff" ]
+    branches: [ "build-0.5.1-thunder-caster-anchor-fix" ]
   workflow_dispatch:
 
 permissions:
@@ -235,7 +235,7 @@ jobs:
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.5.1-thunder-axis-restore-buff
+          name: dreamstar-1.20.1-0.5.1-thunder-caster-anchor-fix
           path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
