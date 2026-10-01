@@ -20,6 +20,11 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
     private static final ResourceLocation TARGET_TEXTURE = new ResourceLocation("dreamstar", "textures/effect/thunder_phantom_blade.png");
     private static final ResourceLocation OPENING_TEXTURE = new ResourceLocation("dreamstar", "textures/effect/thunder_cast_slash.png");
 
+    // User-marked caster anchor in frame 4: about x=58.4%, y=80.3% of the texture.
+    private static final double OPENING_CASTER_U = 0.584D;
+    private static final double OPENING_CASTER_V = 0.803D;
+    private static final double OPENING_CASTER_TO_ENTITY = 2.5D;
+
     public ThunderSlashRenderer(EntityRendererProvider.Context c){ super(c); }
 
     @Override
@@ -33,8 +38,9 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
         if(age < 0L || age >= e.animationDuration()) return;
 
         if (e.mode() == ThunderSlashEntity.MODE_OPENING_SLASH) {
-            renderViewAlignedOpeningSlash(pose, buffers, e, partialTick);
+            renderCasterAnchoredOpeningSlash(pose, buffers, e, partialTick);
         } else {
+            // Keep the confirmed buff slash orientation unchanged.
             pose.pushPose();
             pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
             pose.mulPose(Axis.YP.rotationDegrees(180.0F));
@@ -46,27 +52,35 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
         super.render(e, yaw, partialTick, pose, buffers, LightTexture.FULL_BRIGHT);
     }
 
-    private static void renderViewAlignedOpeningSlash(PoseStack pose, MultiBufferSource buffers, ThunderSlashEntity e, float partialTick) {
+    private static void renderCasterAnchoredOpeningSlash(PoseStack pose, MultiBufferSource buffers, ThunderSlashEntity e, float partialTick) {
         int frame = e.openingFrame(partialTick);
         float v0 = frame / (float)ThunderSlashEntity.OPENING_FRAME_COUNT;
         float v1 = (frame + 1.0F) / (float)ThunderSlashEntity.OPENING_FRAME_COUNT;
-        float half = e.visualScale() * 0.5F;
+        double scale = e.visualScale();
+        double half = scale * 0.5D;
 
+        // Same view-space basis as Flaming Strike:
+        // texture up = caster forward (including pitch), texture right = caster right.
         Vec3 forward = Vec3.directionFromRotation(e.facingPitch(), e.facingYaw()).normalize();
         Vec3 referenceUp = Math.abs(forward.dot(new Vec3(0.0D, 1.0D, 0.0D))) > 0.999D
                 ? new Vec3(1.0D, 0.0D, 0.0D)
                 : new Vec3(0.0D, 1.0D, 0.0D);
         Vec3 right = forward.cross(referenceUp).normalize();
 
-        // Keep the slash plane aligned to the caster's full view like Flaming Strike.
-        // The texture's long axis now runs front <-> back instead of left <-> right.
-        Vec3 primary = forward;
-        Vec3 secondary = right;
+        Vec3 primary = right;
+        Vec3 secondary = forward;
 
-        Vec3 p0 = primary.scale(-half).add(secondary.scale(-half));
-        Vec3 p1 = primary.scale(-half).add(secondary.scale( half));
-        Vec3 p2 = primary.scale( half).add(secondary.scale( half));
-        Vec3 p3 = primary.scale( half).add(secondary.scale(-half));
+        // The slash entity itself sits 2.5 blocks in front of the caster.
+        // Offset the quad so the exact marked point in the texture lands back on the caster.
+        Vec3 anchorFromQuadCenter = primary.scale((OPENING_CASTER_U - 0.5D) * scale)
+                .add(secondary.scale((0.5D - OPENING_CASTER_V) * scale));
+        Vec3 casterFromEntity = forward.scale(-OPENING_CASTER_TO_ENTITY);
+        Vec3 quadOffset = casterFromEntity.subtract(anchorFromQuadCenter);
+
+        Vec3 p0 = quadOffset.add(primary.scale(-half)).add(secondary.scale(-half));
+        Vec3 p1 = quadOffset.add(primary.scale(-half)).add(secondary.scale( half));
+        Vec3 p2 = quadOffset.add(primary.scale( half)).add(secondary.scale( half));
+        Vec3 p3 = quadOffset.add(primary.scale( half)).add(secondary.scale(-half));
 
         Vec3 normal = primary.cross(secondary).normalize();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucent(OPENING_TEXTURE));
