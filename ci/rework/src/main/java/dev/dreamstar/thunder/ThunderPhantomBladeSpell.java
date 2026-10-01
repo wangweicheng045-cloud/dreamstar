@@ -7,6 +7,8 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
 import io.redspace.ironsspellbooks.api.spells.SpellRarity;
+import io.redspace.ironsspellbooks.api.spells.SpellAnimations;
+import io.redspace.ironsspellbooks.api.util.AnimationHolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -37,6 +39,9 @@ public final class ThunderPhantomBladeSpell extends AbstractSpell {
     @Override public int getEffectiveCastTime(int spellLevel, LivingEntity caster){ return 10; }
     @Override public SpellRarity getRarity(int level){ return level<=1?SpellRarity.RARE:level==2?SpellRarity.EPIC:SpellRarity.LEGENDARY; }
     @Override public int getMinLevelForRarity(SpellRarity rarity){ return rarity==SpellRarity.RARE?1:rarity==SpellRarity.EPIC?2:rarity==SpellRarity.LEGENDARY?3:0; }
+
+    @Override public AnimationHolder getCastStartAnimation(){ return SpellAnimations.ONE_HANDED_HORIZONTAL_SWING_ANIMATION; }
+    @Override public AnimationHolder getCastFinishAnimation(){ return AnimationHolder.pass(); }
 
     public static int durationTicks(int level){ return level<=1?300:level==2?400:500; }
     public static float slashDamage(int level){ return level<=1?6.0F:level==2?10.0F:15.0F; }
