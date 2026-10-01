@@ -106,7 +106,6 @@ jobs:
                   if (this.aborting()) return;
                   this.entityData.set(ABORTING, true);
                   this.entityData.set(END_TICK, server.getGameTime() + 60L);
-                  DomainFamilyLock.clearActiveDomain(server, this.ownerUUID);
               }
 
           '''+s[end:]
