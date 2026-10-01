@@ -1,0 +1,31 @@
+name: Inspect original spell costs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "inspect-original-spell-costs" ]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct original 0.5.1 snapshot and print costs
+        run: |
+          cat ci/dreamstar-0.5.1-source.b64.* | tr -d '\n\r' | base64 --decode > /tmp/src.zip
+          rm -rf /tmp/src && mkdir -p /tmp/src
+          unzip -q /tmp/src.zip -d /tmp/src
+          ROOT="$(dirname "$(find /tmp/src -name build.gradle -print -quit)")"
+          echo "ROOT=$ROOT"
+          for F in             "$ROOT/src/main/java/dev/dreamstar/spell/DreamStarSpell.java"             "$ROOT/src/main/java/dev/dreamstar/time/TimeLockSpell.java"             "$ROOT/src/main/java/dev/dreamstar/time/TimeCrystalSpell.java"
+          do
+            echo "=== $F ==="
+            if [ -f "$F" ]; then
+              grep -nE 'setCooldownSeconds|baseManaCost|manaCostPerLevel' "$F" || true
+            else
+              echo "MISSING"
+            fi
+          done
