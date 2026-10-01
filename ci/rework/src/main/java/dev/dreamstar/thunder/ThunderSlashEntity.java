@@ -46,6 +46,7 @@ public final class ThunderSlashEntity extends Entity {
     private static final EntityDataAccessor<Long> ANIMATION_START_TICK = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Integer> MODE = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> FACING_YAW = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> FACING_PITCH = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> OPENING_SPELL_LEVEL = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.INT);
     private static final ResourceLocation OPENING_SOUND_ID = new ResourceLocation("dreamstar", "thunder_opening_slash");
 
@@ -56,6 +57,7 @@ public final class ThunderSlashEntity extends Entity {
     public ThunderSlashEntity(EntityType<? extends ThunderSlashEntity> type, Level level) {
         super(type, level);
         noPhysics = true;
+        noCulling = true;
     }
 
     @Override
@@ -66,6 +68,7 @@ public final class ThunderSlashEntity extends Entity {
         entityData.define(ANIMATION_START_TICK, 0L);
         entityData.define(MODE, MODE_TARGET_SLASH);
         entityData.define(FACING_YAW, 0F);
+        entityData.define(FACING_PITCH, 0F);
         entityData.define(OPENING_SPELL_LEVEL, 1);
     }
 
@@ -86,8 +89,9 @@ public final class ThunderSlashEntity extends Entity {
         entityData.set(OPENING_SPELL_LEVEL, Math.max(1, Math.min(3, spellLevel)));
         ownerUuid = owner.getUUID();
         entityData.set(FACING_YAW, owner.getYRot());
+        entityData.set(FACING_PITCH, owner.getXRot());
 
-        Vec3 forward = horizontalFacing(owner);
+        Vec3 forward = owner.getLookAngle().normalize();
         Vec3 origin = owner.position().add(0.0D, owner.getBbHeight() * 0.7D, 0.0D);
         Vec3 center = origin.add(forward.scale(OPENING_DEPTH * 0.5D));
         setPos(center.x, center.y, center.z);
@@ -104,6 +108,7 @@ public final class ThunderSlashEntity extends Entity {
     public LivingEntity target() { Entity e = level().getEntity(targetId()); return e instanceof LivingEntity l ? l : null; }
     public float visualScale() { return entityData.get(VISUAL_SCALE); }
     public float facingYaw() { return entityData.get(FACING_YAW); }
+    public float facingPitch() { return entityData.get(FACING_PITCH); }
     public long animationAge() { return level().getGameTime() - entityData.get(ANIMATION_START_TICK); }
     public int animationFrames() { return mode() == MODE_OPENING_SLASH ? OPENING_FRAME_COUNT : TARGET_FRAME_COUNT; }
     public int animationDuration() { return mode() == MODE_OPENING_SLASH ? OPENING_ANIM_TICKS : TARGET_VISUAL_TICKS; }
@@ -179,19 +184,24 @@ public final class ThunderSlashEntity extends Entity {
         LivingEntity owner = owner();
         if (!(level() instanceof ServerLevel server) || owner == null || !owner.isAlive()) return;
 
-        Vec3 forward = Vec3.directionFromRotation(0.0F, facingYaw());
-        forward = new Vec3(forward.x, 0.0D, forward.z).normalize();
-        Vec3 right = new Vec3(-forward.z, 0.0D, forward.x);
+        Vec3 forward = Vec3.directionFromRotation(facingPitch(), facingYaw()).normalize();
+        Vec3 referenceUp = Math.abs(forward.dot(new Vec3(0.0D, 1.0D, 0.0D))) > 0.999D
+                ? new Vec3(1.0D, 0.0D, 0.0D)
+                : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 right = forward.cross(referenceUp).normalize();
+        Vec3 up = right.cross(forward).normalize();
         Vec3 slashCenter = position();
         Vec3 origin = slashCenter.subtract(forward.scale(OPENING_DEPTH * 0.5D));
-        AABB candidates = AABB.ofSize(slashCenter, OPENING_DEPTH + 1.0D, OPENING_HALF_HEIGHT * 2.0D, OPENING_DEPTH + 1.0D);
+        AABB candidates = AABB.ofSize(slashCenter, OPENING_DEPTH + OPENING_HALF_WIDTH * 2.0D,
+                OPENING_HALF_HEIGHT * 2.0D + OPENING_DEPTH,
+                OPENING_DEPTH + OPENING_HALF_WIDTH * 2.0D);
 
         for (Entity entity : server.getEntities(owner, candidates, e -> canHitOpeningTarget(owner, e))) {
             Vec3 point = entity.getBoundingBox().getCenter();
             Vec3 relative = point.subtract(origin);
-            double forwardDistance = relative.x * forward.x + relative.z * forward.z;
-            double sideDistance = Math.abs(relative.x * right.x + relative.z * right.z);
-            double verticalDistance = Math.abs(relative.y);
+            double forwardDistance = relative.dot(forward);
+            double sideDistance = Math.abs(relative.dot(right));
+            double verticalDistance = Math.abs(relative.dot(up));
 
             if (forwardDistance < 0.0D || forwardDistance > OPENING_DEPTH) continue;
             if (sideDistance > OPENING_HALF_WIDTH) continue;
@@ -268,6 +278,11 @@ public final class ThunderSlashEntity extends Entity {
     }
 
     @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return distance < 262144.0D;
+    }
+
+    @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
         if (tag.hasUUID("Owner")) ownerUuid = tag.getUUID("Owner");
         entityData.set(TARGET_ID, tag.getInt("Target"));
@@ -276,6 +291,7 @@ public final class ThunderSlashEntity extends Entity {
         entityData.set(ANIMATION_START_TICK, tag.getLong("AnimationStartTick"));
         entityData.set(MODE, tag.getInt("Mode"));
         entityData.set(FACING_YAW, tag.getFloat("FacingYaw"));
+        entityData.set(FACING_PITCH, tag.getFloat("FacingPitch"));
         entityData.set(OPENING_SPELL_LEVEL, tag.contains("OpeningSpellLevel") ? tag.getInt("OpeningSpellLevel") : 1);
         damageApplied = tag.getBoolean("DamageApplied");
         frozen = tag.getBoolean("Frozen");
@@ -291,6 +307,7 @@ public final class ThunderSlashEntity extends Entity {
         tag.putLong("AnimationStartTick", entityData.get(ANIMATION_START_TICK));
         tag.putInt("Mode", mode());
         tag.putFloat("FacingYaw", facingYaw());
+        tag.putFloat("FacingPitch", facingPitch());
         tag.putInt("OpeningSpellLevel", entityData.get(OPENING_SPELL_LEVEL));
         tag.putBoolean("DamageApplied", damageApplied);
         tag.putBoolean("Frozen", frozen);
