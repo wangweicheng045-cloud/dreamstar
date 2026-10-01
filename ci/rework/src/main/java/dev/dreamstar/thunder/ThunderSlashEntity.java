@@ -3,6 +3,9 @@ package dev.dreamstar.thunder;
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import io.redspace.ironsspellbooks.util.ParticleHelper;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -22,13 +25,15 @@ public final class ThunderSlashEntity extends Entity {
     public static final int MODE_TARGET_SLASH = 0;
     public static final int MODE_OPENING_SLASH = 1;
 
-    private static final int TARGET_DELAY_TICKS = 20;
-    private static final int TARGET_ANIM_TICKS = 18;
-    private static final int TARGET_DAMAGE_TICK = 6;
+    private static final int TARGET_DELAY_TICKS = 4;
+    public static final int TARGET_FRAME_COUNT = 9;
+    private static final float TARGET_FPS = 12.0F;
+    private static final int TARGET_VISUAL_TICKS = 15;
+    private static final int TARGET_DAMAGE_TICK = 5;
 
-    public static final int OPENING_FRAME_COUNT = 16;
-    public static final int OPENING_FRAME_MILLIS = 66;
-    private static final int OPENING_ANIM_TICKS = 22;
+    public static final int OPENING_FRAME_COUNT = 12;
+    private static final float OPENING_FPS = 12.0F;
+    private static final int OPENING_ANIM_TICKS = 20;
     private static final int OPENING_DAMAGE_TICK = 4;
     private static final double OPENING_DEPTH = 5.0D;
     private static final double OPENING_HALF_WIDTH = 2.5D;
@@ -41,6 +46,7 @@ public final class ThunderSlashEntity extends Entity {
     private static final EntityDataAccessor<Integer> MODE = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> FACING_YAW = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> OPENING_SPELL_LEVEL = SynchedEntityData.defineId(ThunderSlashEntity.class, EntityDataSerializers.INT);
+    private static final ResourceLocation OPENING_SOUND_ID = new ResourceLocation("dreamstar", "thunder_opening_slash");
 
     private UUID ownerUuid;
     private boolean damageApplied;
@@ -88,6 +94,7 @@ public final class ThunderSlashEntity extends Entity {
         setXRot(0.0F);
         entityData.set(VISUAL_SCALE, 6.5F);
         spawnOpeningParticles();
+        playOpeningSound();
         frozen = true;
     }
 
@@ -97,13 +104,19 @@ public final class ThunderSlashEntity extends Entity {
     public float visualScale() { return entityData.get(VISUAL_SCALE); }
     public float facingYaw() { return entityData.get(FACING_YAW); }
     public long animationAge() { return level().getGameTime() - entityData.get(ANIMATION_START_TICK); }
-    public int animationFrames() { return mode() == MODE_OPENING_SLASH ? OPENING_FRAME_COUNT : 9; }
-    public int animationDuration() { return mode() == MODE_OPENING_SLASH ? OPENING_ANIM_TICKS : TARGET_ANIM_TICKS; }
+    public int animationFrames() { return mode() == MODE_OPENING_SLASH ? OPENING_FRAME_COUNT : TARGET_FRAME_COUNT; }
+    public int animationDuration() { return mode() == MODE_OPENING_SLASH ? OPENING_ANIM_TICKS : TARGET_VISUAL_TICKS; }
 
     public int openingFrame(float partialTick) {
         double elapsedTicks = Math.max(0.0D, animationAge() + partialTick);
-        int frame = (int)Math.floor(elapsedTicks * 50.0D / OPENING_FRAME_MILLIS);
+        int frame = (int)Math.floor(elapsedTicks * OPENING_FPS / 20.0D);
         return Math.max(0, Math.min(OPENING_FRAME_COUNT - 1, frame));
+    }
+
+    public int targetFrame(float partialTick) {
+        double elapsedTicks = Math.max(0.0D, animationAge() + partialTick);
+        int frame = (int)Math.floor(elapsedTicks * TARGET_FPS / 20.0D);
+        return Math.max(0, Math.min(TARGET_FRAME_COUNT - 1, frame));
     }
 
     private LivingEntity owner() {
@@ -137,6 +150,13 @@ public final class ThunderSlashEntity extends Entity {
         MagicManager.spawnParticles(server, ParticleHelper.ELECTRICITY,
                 getX(), getY(), getZ(),
                 6, 0.8D, 0.45D, 0.8D, 0.055D, false);
+    }
+
+    private void playOpeningSound() {
+        if (!(level() instanceof ServerLevel server)) return;
+        server.playSound(null, getX(), getY(), getZ(),
+                SoundEvent.createVariableRangeEvent(OPENING_SOUND_ID), SoundSource.PLAYERS,
+                1.2F, 1.0F);
     }
 
     private boolean canHitOpeningTarget(LivingEntity owner, Entity target) {
@@ -225,11 +245,16 @@ public final class ThunderSlashEntity extends Entity {
                 if (o != null && o.isAlive()) {
                     DamageSources.applyDamage(t, entityData.get(DAMAGE), ThunderRegistry.SPELL.getDamageSource(this, o));
                     t.invulnerableTime = 0;
+                    if (level() instanceof ServerLevel server) {
+                        MagicManager.spawnParticles(server, ParticleHelper.ELECTRICITY,
+                                t.getX(), t.getY() + t.getBbHeight() * 0.5D, t.getZ(),
+                                8, t.getBbWidth() * 0.25D, t.getBbHeight() * 0.25D, t.getBbWidth() * 0.25D, 0.05D, false);
+                    }
                 }
             }
         }
 
-        if (age >= TARGET_ANIM_TICKS) discard();
+        if (age >= TARGET_VISUAL_TICKS) discard();
     }
 
     @Override
