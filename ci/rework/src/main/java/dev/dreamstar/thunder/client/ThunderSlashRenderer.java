@@ -31,33 +31,37 @@ public final class ThunderSlashRenderer extends EntityRenderer<ThunderSlashEntit
         long age = e.animationAge();
         if(age < 0L || age >= e.animationDuration()) return;
 
-        int frames = e.animationFrames();
-        int frame = e.mode() == ThunderSlashEntity.MODE_OPENING_SLASH
-                ? e.openingFrame(partialTick)
-                : Math.min(frames - 1, Math.max(0, (int)(age / 2L)));
-        float v0 = frame / (float)frames;
-        float v1 = (frame + 1) / (float)frames;
-        float scale = e.visualScale();
-        ResourceLocation texture = getTextureLocation(e);
-
         pose.pushPose();
         pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
         pose.mulPose(Axis.YP.rotationDegrees(180.0F));
-        pose.scale(scale, scale, scale);
 
+        if (e.mode() == ThunderSlashEntity.MODE_OPENING_SLASH) {
+            pose.mulPose(Axis.ZP.rotationDegrees(90.0F));
+            renderSheetQuad(pose, buffers, OPENING_TEXTURE, e.visualScale(), e.openingFrame(partialTick), ThunderSlashEntity.OPENING_FRAME_COUNT, 255);
+        } else {
+            renderSheetQuad(pose, buffers, TARGET_TEXTURE, e.visualScale() * 3.0F, e.targetFrame(partialTick), ThunderSlashEntity.TARGET_FRAME_COUNT, 255);
+        }
+
+        pose.popPose();
+        super.render(e, yaw, partialTick, pose, buffers, LightTexture.FULL_BRIGHT);
+    }
+
+    private static void renderSheetQuad(PoseStack pose, MultiBufferSource buffers, ResourceLocation texture, float scale, int frame, int frames, int alpha){
+        pose.pushPose();
+        pose.scale(scale, scale, scale);
+        float v0 = frame / (float)frames;
+        float v1 = (frame + 1) / (float)frames;
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucent(texture));
         Matrix4f m = pose.last().pose();
         Matrix3f n = pose.last().normal();
-        vertex(vc,m,n,-.5F,-.5F,0.0F,v1);
-        vertex(vc,m,n,.5F,-.5F,1.0F,v1);
-        vertex(vc,m,n,.5F,.5F,1.0F,v0);
-        vertex(vc,m,n,-.5F,.5F,0.0F,v0);
+        vertex(vc, m, n, -.5F, -.5F, 0F, v1, alpha);
+        vertex(vc, m, n, .5F, -.5F, 1F, v1, alpha);
+        vertex(vc, m, n, .5F, .5F, 1F, v0, alpha);
+        vertex(vc, m, n, -.5F, .5F, 0F, v0, alpha);
         pose.popPose();
-
-        super.render(e,yaw,partialTick,pose,buffers,LightTexture.FULL_BRIGHT);
     }
 
-    private static void vertex(VertexConsumer vc, Matrix4f m, Matrix3f n, float x, float y, float u, float v){
-        vc.vertex(m,x,y,0.0F).color(255,255,255,255).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(n,0,0,1).endVertex();
+    private static void vertex(VertexConsumer vc, Matrix4f m, Matrix3f n, float x, float y, float u, float v, int alpha){
+        vc.vertex(m, x, y, 0F).color(255,255,255,alpha).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(n,0,0,1).endVertex();
     }
 }
