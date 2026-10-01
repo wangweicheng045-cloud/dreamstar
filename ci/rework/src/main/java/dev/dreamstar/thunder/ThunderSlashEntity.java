@@ -3,6 +3,7 @@ package dev.dreamstar.thunder;
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import io.redspace.ironsspellbooks.util.ParticleHelper;
+import io.redspace.ironsspellbooks.registries.SoundRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -159,6 +160,13 @@ public final class ThunderSlashEntity extends Entity {
                 1.2F, 1.0F);
     }
 
+    private void playComboSound() {
+        if (!(level() instanceof ServerLevel server)) return;
+        server.playSound(null, getX(), getY(), getZ(),
+                SoundRegistry.LIGHTNING_LANCE_CAST.get(), SoundSource.PLAYERS,
+                1.0F, 1.0F);
+    }
+
     private boolean canHitOpeningTarget(LivingEntity owner, Entity target) {
         return target != owner
                 && target instanceof LivingEntity living
@@ -236,6 +244,7 @@ public final class ThunderSlashEntity extends Entity {
             if (t == null || !t.isAlive() || t.isRemoved()) { discard(); return; }
             follow(t);
             frozen = true;
+            playComboSound();
         }
 
         if (!level().isClientSide && !damageApplied && age >= TARGET_DAMAGE_TICK) {
@@ -243,7 +252,8 @@ public final class ThunderSlashEntity extends Entity {
             if (t != null && t.isAlive() && !t.isRemoved()) {
                 LivingEntity o = owner();
                 if (o != null && o.isAlive()) {
-                    DamageSources.applyDamage(t, entityData.get(DAMAGE), ThunderRegistry.SPELL.getDamageSource(this, o));
+                    float scaledDamage = entityData.get(DAMAGE) * ThunderRegistry.SPELL.getEntityPowerMultiplier(o);
+                    DamageSources.applyDamage(t, scaledDamage, ThunderRegistry.SPELL.getDamageSource(this, o));
                     t.invulnerableTime = 0;
                     if (level() instanceof ServerLevel server) {
                         MagicManager.spawnParticles(server, ParticleHelper.ELECTRICITY,
