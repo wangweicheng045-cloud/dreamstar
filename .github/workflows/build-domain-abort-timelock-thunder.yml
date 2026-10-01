@@ -1,8 +1,8 @@
-name: Build thunder 12fps realcompile delay02
+name: Build thunder horizontal lightning scale
 
 on:
   push:
-    branches: [ "build-0.5.1-thunder-12fps-realcompile-delay02" ]
+    branches: [ "build-0.5.1-thunder-horizontal-lightning-scale" ]
   workflow_dispatch:
 
 permissions:
@@ -235,7 +235,7 @@ jobs:
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.5.1-thunder-12fps-realcompile-delay02
+          name: dreamstar-1.20.1-0.5.1-thunder-horizontal-lightning-scale
           path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
