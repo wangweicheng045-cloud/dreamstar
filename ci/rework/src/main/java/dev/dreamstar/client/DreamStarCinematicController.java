@@ -124,7 +124,7 @@ public final class DreamStarCinematicController {
                     remoteCastAudios.put(id, sound);
                     mc.getSoundManager().play(sound);
                 }
-                if (age >= 98L && age <= 108L && remoteCastWhiteTriggered.add(id)) {
+                if (signal.completed() && age >= 98L && age <= 108L && remoteCastWhiteTriggered.add(id)) {
                     triggerWhite(10, 30);
                 }
             } else {
