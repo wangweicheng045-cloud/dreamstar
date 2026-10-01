@@ -1,0 +1,43 @@
+name: Build DreamStar domain death time thunder combo
+
+on:
+  push:
+    branches: [ "build-0.5.1-domain-death-time-thunder-combo" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct latest confirmed source and apply scoped patch
+        run: |
+          cat ci/0.5.1-time-crystal/source.part-* > /tmp/base.zip
+          echo "4a3be44f13fbc1aa8a3ca3b11021a43bc620f2c0931e054001057d8a2f704297  /tmp/base.zip" | sha256sum -c -
+          rm -rf /tmp/src && mkdir -p /tmp/src
+          unzip -q /tmp/base.zip -d /tmp/src
+          PROJECT_DIR="$(dirname "$(find /tmp/src -maxdepth 3 -name build.gradle -print -quit)")"
+          cp -a ci/rework/src/. "$PROJECT_DIR/src/"
+          python3 ci/followup_patch.py "$PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+      - name: Build Forge mod
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle clean build -x test --no-daemon --stacktrace
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-domain-death-time-thunder-combo
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
