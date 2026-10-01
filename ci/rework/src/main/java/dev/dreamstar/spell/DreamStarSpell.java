@@ -14,6 +14,7 @@ package dev.dreamstar.spell;
 
 import dev.dreamstar.Dreamstar;
 import dev.dreamstar.domain.DomainEntity;
+import dev.dreamstar.domain.DomainCastSignalEntity;
 import dev.dreamstar.domain.DomainFamilyLock;
 import dev.dreamstar.whale.WhaleAllies;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -34,6 +36,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ClipContext;
@@ -48,6 +51,7 @@ extends AbstractSpell {
     private static final int COOLDOWN_SECONDS = 180;
     private static final int CAST_TICKS = 100;
     private static final double CAST_HOVER_HEIGHT = 2.0;
+    private static final String NON_PLAYER_CAST_SIGNAL_TAG = "dreamstar.domain_cast_signal";
     private final DefaultConfig config = new DefaultConfig().setMinRarity(SpellRarity.LEGENDARY).setSchoolResource(SchoolRegistry.ENDER_RESOURCE).setMaxLevel(1).setCooldownSeconds(180.0).build();
 
     public DreamStarSpell() {
@@ -108,6 +112,7 @@ extends AbstractSpell {
             return;
         }
         ServerLevel server = (ServerLevel)level;
+        DreamStarSpell.touchNonPlayerCastSignal(server, caster);
         double groundY = DreamStarSpell.groundY(caster);
         double targetY = groundY + 2.0;
         double error = targetY - caster.getY();
@@ -148,10 +153,55 @@ extends AbstractSpell {
                 domain.initialize(40.0f, caster);
                 if (level.addFreshEntity(domain)) {
                     DomainFamilyLock.lockActiveDomain(server, familyId, 1200L);
+                    DreamStarSpell.completeNonPlayerCastSignal(server, caster);
                 }
             }
         }
         super.onCast(level, spellLevel, caster, source, data);
+    }
+
+    private static void touchNonPlayerCastSignal(ServerLevel server, LivingEntity caster) {
+        if (caster instanceof ServerPlayer) {
+            return;
+        }
+        DomainCastSignalEntity signal = null;
+        CompoundTag persistent = caster.getPersistentData();
+        if (persistent.hasUUID(NON_PLAYER_CAST_SIGNAL_TAG)) {
+            Entity existing = server.getEntity(persistent.getUUID(NON_PLAYER_CAST_SIGNAL_TAG));
+            if (existing instanceof DomainCastSignalEntity current && !current.isRemoved()) {
+                signal = current;
+            } else {
+                persistent.remove(NON_PLAYER_CAST_SIGNAL_TAG);
+            }
+        }
+        if (signal == null) {
+            signal = Dreamstar.DOMAIN_CAST_SIGNAL.get().create(server);
+            if (signal == null) {
+                return;
+            }
+            signal.initialize(caster);
+            if (server.addFreshEntity(signal)) {
+                persistent.putUUID(NON_PLAYER_CAST_SIGNAL_TAG, signal.getUUID());
+            } else {
+                return;
+            }
+        }
+        signal.touch(caster);
+    }
+
+    private static void completeNonPlayerCastSignal(ServerLevel server, LivingEntity caster) {
+        if (caster instanceof ServerPlayer) {
+            return;
+        }
+        CompoundTag persistent = caster.getPersistentData();
+        if (!persistent.hasUUID(NON_PLAYER_CAST_SIGNAL_TAG)) {
+            return;
+        }
+        Entity existing = server.getEntity(persistent.getUUID(NON_PLAYER_CAST_SIGNAL_TAG));
+        if (existing instanceof DomainCastSignalEntity signal && !signal.isRemoved()) {
+            signal.complete(caster);
+        }
+        persistent.remove(NON_PLAYER_CAST_SIGNAL_TAG);
     }
 
     private static double groundY(LivingEntity caster) {
