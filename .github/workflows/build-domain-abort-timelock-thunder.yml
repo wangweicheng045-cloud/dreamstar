@@ -1,8 +1,8 @@
-name: Build thunder horizontal lightning scale
+name: Build thunder axis restore buff
 
 on:
   push:
-    branches: [ "build-0.5.1-thunder-horizontal-lightning-scale" ]
+    branches: [ "build-0.5.1-thunder-axis-restore-buff" ]
   workflow_dispatch:
 
 permissions:
@@ -235,7 +235,7 @@ jobs:
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-1.20.1-0.5.1-thunder-horizontal-lightning-scale
+          name: dreamstar-1.20.1-0.5.1-thunder-axis-restore-buff
           path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
