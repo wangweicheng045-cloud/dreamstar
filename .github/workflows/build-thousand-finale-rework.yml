@@ -32,6 +32,16 @@ jobs:
           mkdir -p work
           unzip -q source.zip -d work
           chmod +x work/gradlew
+          # Remove four legacy duplicate blade-glow files whose non-ASCII names are
+          # mangled by cross-platform ZIP filename encoding. The canonical 01..14
+          # textures remain untouched and are the files actually used by the mod.
+          find work/src/main/resources/assets/dreamstar/textures/effect/thousand/model -maxdepth 1 -type f | while read -r p; do
+            n="$(basename "$p")"
+            if [[ "$n" != "blade_core.png" && ! "$n" =~ ^blade_glow_[0-9]{2}\.png$ ]]; then
+              echo "Removing legacy duplicate texture: $n"
+              rm -f "$p"
+            fi
+          done
           echo "Reconstructed source.zip:"
           ls -lh source.zip
           echo "Main source count:"
