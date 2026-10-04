@@ -1,0 +1,63 @@
+name: Build Thousand Finale Rework
+
+on:
+  push:
+    branches:
+      - build-0.5.1-thousand-finale-rework
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Reconstruct source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f source.zip
+          for f in ci/thousand-finale/source.part-*.b64; do
+            base64 -d "$f" >> source.zip
+          done
+          mkdir -p work
+          unzip -q source.zip -d work
+          chmod +x work/gradlew
+          echo "Reconstructed source.zip:"
+          ls -lh source.zip
+          echo "Main source count:"
+          find work/src/main -type f | wc -l
+
+      - name: Build Forge 1.20.1 mod
+        working-directory: work
+        run: ./gradlew --no-daemon --stacktrace clean build -x test
+
+      - name: Verify jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh work/build/libs/
+          JAR="$(find work/build/libs -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          test -n "$JAR"
+          jar tf "$JAR" | grep -q 'dev/dreamstar/thousand/ThousandBladeEntity.class'
+          jar tf "$JAR" | grep -q 'dev/dreamstar/thousand/client/FinaleSlashRenderer.class'
+          jar tf "$JAR" | grep -q 'assets/dreamstar/textures/effect/thousand/opening_01.png'
+          jar tf "$JAR" | grep -q 'assets/dreamstar/textures/effect/thousand/dimension_slash_04.png'
+          echo "Verified $JAR"
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-thousand-finale-rework
+          path: work/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
