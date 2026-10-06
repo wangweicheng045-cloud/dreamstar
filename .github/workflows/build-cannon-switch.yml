@@ -1,0 +1,44 @@
+name: Build DreamStar Cannon Switch
+on:
+  push:
+    branches: [ "build-0.5.1-cannon-switch" ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct exact base and apply switch delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/0.5.1-time-crystal/source.part-* > /tmp/base.zip
+          echo "4a3be44f13fbc1aa8a3ca3b11021a43bc620f2c0931e054001057d8a2f704297  /tmp/base.zip" | sha256sum -c -
+          rm -rf /tmp/src && mkdir -p /tmp/src
+          unzip -q /tmp/base.zip -d /tmp/src
+          PROJECT_DIR="$(dirname "$(find /tmp/src -maxdepth 3 -name build.gradle -print -quit)")"
+          test -n "$PROJECT_DIR"
+          cp -a ci/rework/src/. "$PROJECT_DIR/src/"
+          cat ci/cannon-switch/delta.b64.* | tr -d '\n\r' | base64 --decode > /tmp/delta.tar.xz
+          tar -xJf /tmp/delta.tar.xz -C "$PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+      - name: Compile Forge mod
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle clean build -x test --no-daemon --stacktrace
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-cannon-switch-compiled
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
