@@ -1,0 +1,26 @@
+name: Inspect Cannon Delta
+on:
+  push:
+    branches: [ "build-0.5.1-cannon-switch" ]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/cannon-switch/delta.b64.* | tr -d '\n\r' | base64 --decode > /tmp/delta.xz
+          echo SIZE $(stat -c%s /tmp/delta.xz)
+          xz -t /tmp/delta.xz
+          echo XZ_OK
+          if tar -tJf /tmp/delta.xz >/tmp/list 2>/tmp/tarerr; then
+            echo TAR_OK
+            cat /tmp/list
+          else
+            echo TAR_FAIL
+            cat /tmp/tarerr
+            xz -dc /tmp/delta.xz | head -100
+          fi
