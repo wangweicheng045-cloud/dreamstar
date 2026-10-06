@@ -1,0 +1,82 @@
+name: Build Cannon Switch
+
+on:
+  push:
+    branches: [ "build-0.5.1-cannon-switch" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct exact predecessor source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin build-0.5.1-thousand-finale-rework:refs/remotes/origin/thousand
+          rm -rf /tmp/cannon-switch
+          mkdir -p /tmp/cannon-switch/parts /tmp/cannon-switch/work
+          for n in $(seq -w 0 18); do
+            git show refs/remotes/origin/thousand:ci/thousand-finale/source.part-${n}.b64 > /tmp/cannon-switch/parts/${n}.b64
+            base64 -d /tmp/cannon-switch/parts/${n}.b64 >> /tmp/cannon-switch/source.zip
+          done
+          unzip -q /tmp/cannon-switch/source.zip -d /tmp/cannon-switch/work
+
+          # Same cleanup used by the already verified thousand-finale build.
+          find /tmp/cannon-switch/work/src/main/resources/assets/dreamstar/textures/effect/thousand/model -maxdepth 1 -type f | while read -r p; do
+            n="$(basename "$p")"
+            if [[ "$n" != "blade_core.png" && ! "$n" =~ ^blade_glow_[0-9]{2}\.png$ ]]; then
+              rm -f "$p"
+            fi
+          done
+
+          base64 -d ci/cannon-switch/compile-overlay.tar.xz.b64 > /tmp/cannon-switch/compile-overlay.tar.xz
+          echo "4b41f18653775a40f62914e7b93f08c9a10656eca0977ed26681a75588826cb0  /tmp/cannon-switch/compile-overlay.tar.xz" | sha256sum -c -
+          tar -xJf /tmp/cannon-switch/compile-overlay.tar.xz -C /tmp/cannon-switch/work
+
+          test -f /tmp/cannon-switch/work/src/main/java/dev/dreamstar/cannon/CannonSwitchSpell.java
+          test -f /tmp/cannon-switch/work/src/main/java/dev/dreamstar/cannon/client/MeleeCannonModel.java
+          test -f /tmp/cannon-switch/work/src/main/java/dev/dreamstar/point/PointSpell.java
+          echo "PROJECT_DIR=/tmp/cannon-switch/work" >> "$GITHUB_ENV"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Build Forge 1.20.1 mod
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle --no-daemon --stacktrace clean build -x test
+
+      - name: Verify compiled switch classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR="$(find "${PROJECT_DIR}/build/libs" -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          test -n "$JAR"
+          jar tf "$JAR" | grep -q 'dev/dreamstar/cannon/CannonSwitchSpell.class'
+          jar tf "$JAR" | grep -q 'dev/dreamstar/cannon/client/MeleeCannonModel.class'
+          jar tf "$JAR" | grep -q 'dev/dreamstar/cannon/HoverCannonEntity.class'
+          jar tf "$JAR" | grep -q 'dev/dreamstar/point/PointSpell.class'
+          echo "Verified compiled jar: $JAR"
+
+      - name: Upload compiled jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamstar-1.20.1-0.5.1-cannon-switch-compiled
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
