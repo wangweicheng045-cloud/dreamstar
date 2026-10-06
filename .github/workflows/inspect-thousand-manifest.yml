@@ -1,0 +1,31 @@
+name: Inspect Thousand Source Manifest
+
+on:
+  push:
+    branches: [ "build-0.5.1-cannon-switch" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct thousand finale source and print manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin build-0.5.1-thousand-finale-rework:refs/remotes/origin/thousand
+          rm -rf /tmp/thousand && mkdir -p /tmp/thousand/parts /tmp/thousand/work
+          for n in $(seq -w 0 18); do
+            git show refs/remotes/origin/thousand:ci/thousand-finale/source.part-${n}.b64 > /tmp/thousand/parts/${n}.b64
+            base64 -d /tmp/thousand/parts/${n}.b64 >> /tmp/thousand/source.zip
+          done
+          unzip -q /tmp/thousand/source.zip -d /tmp/thousand/work
+          cd /tmp/thousand/work
+          echo MANIFEST_BEGIN
+          { printf '%s\n' build.gradle settings.gradle gradle.properties; find src/main -type f -print | sort; } | while IFS= read -r f; do sha256sum "$f"; done
+          echo MANIFEST_END
