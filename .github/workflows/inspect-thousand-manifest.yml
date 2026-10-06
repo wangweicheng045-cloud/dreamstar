@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Reconstruct thousand finale source and print manifest
+      - name: Reconstruct thousand source and compare manifest
         shell: bash
         run: |
           set -euo pipefail
@@ -25,7 +25,35 @@ jobs:
             base64 -d /tmp/thousand/parts/${n}.b64 >> /tmp/thousand/source.zip
           done
           unzip -q /tmp/thousand/source.zip -d /tmp/thousand/work
+          cd "$GITHUB_WORKSPACE"
+          base64 -d ci/cannon-switch/user-manifest.xz.b64 | xz -d > /tmp/user.manifest
           cd /tmp/thousand/work
-          echo MANIFEST_BEGIN
-          { printf '%s\n' build.gradle settings.gradle gradle.properties; find src/main -type f -print | sort; } | while IFS= read -r f; do sha256sum "$f"; done
-          echo MANIFEST_END
+          { printf '%s\n' build.gradle settings.gradle gradle.properties; find src/main -type f -print | sort; } | while IFS= read -r f; do
+            if printf '%s' "$f" | LC_ALL=C grep -q '[^ -~]'; then
+              continue
+            fi
+            sha256sum "$f"
+          done > /tmp/thousand.manifest
+          python3 - <<'PY'
+          from pathlib import Path
+          def load(p):
+              out={}
+              for line in Path(p).read_text(encoding='utf-8').splitlines():
+                  if not line.strip(): continue
+                  h,path=line.split('  ',1)
+                  out[path]=h
+              return out
+          u=load('/tmp/user.manifest')
+          t=load('/tmp/thousand.manifest')
+          print('ONLY_USER_BEGIN')
+          for p in sorted(set(u)-set(t)): print(p)
+          print('ONLY_USER_END')
+          print('HASH_DIFF_BEGIN')
+          for p in sorted(set(u)&set(t)):
+              if u[p]!=t[p]: print(p)
+          print('HASH_DIFF_END')
+          print('ONLY_THOUSAND_BEGIN')
+          for p in sorted(set(t)-set(u)): print(p)
+          print('ONLY_THOUSAND_END')
+          print('COUNTS', len(u), len(t), len(set(u)-set(t)), sum(u[p]!=t[p] for p in set(u)&set(t)), len(set(t)-set(u)))
+          PY
