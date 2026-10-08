@@ -2,7 +2,7 @@ name: Build Dreamstar JAR
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "lock-strike-0.5.29" ]
   workflow_dispatch:
 
 permissions:
@@ -24,34 +24,25 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.8"
-      - name: Reconstruct complete source and apply current patches
+      - name: Reconstruct source and delta
         run: |
           cat ci/dreamstar-0.5.1-source.b64.* | tr -d '\n\r' | base64 --decode > /tmp/src.zip
           rm -rf /tmp/src
           mkdir -p /tmp/src
           unzip -q /tmp/src.zip -d /tmp/src
-
-          # Preserve the previously approved time-lock/domain fixes.
-          cp ci/patch/TimeDomainCombo.java /tmp/src/src/main/java/dev/dreamstar/time/TimeDomainCombo.java
-          cp ci/patch/TimeLockState.java /tmp/src/src/main/java/dev/dreamstar/time/TimeLockState.java
-          cp ci/patch/TimeLockEvents.java /tmp/src/src/main/java/dev/dreamstar/time/TimeLockEvents.java
-          cp ci/patch/TimeVisuals.java /tmp/src/src/main/java/dev/dreamstar/time/client/TimeVisuals.java
-
-          # Apply the newest time-crystal implementation from the repository.
-          cp src/main/java/dev/dreamstar/time/TimeCrystal.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystal.java
-          cp src/main/java/dev/dreamstar/time/TimeCrystalSpell.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystalSpell.java
-          cp src/main/java/dev/dreamstar/time/TimeCrystalRecast.java /tmp/src/src/main/java/dev/dreamstar/time/TimeCrystalRecast.java
-          cp src/main/java/dev/dreamstar/time/TimeRegistry.java /tmp/src/src/main/java/dev/dreamstar/time/TimeRegistry.java
-          cp src/main/java/dev/dreamstar/time/client/TimeCrystalRenderer.java /tmp/src/src/main/java/dev/dreamstar/time/client/TimeCrystalRenderer.java
-          cp src/main/resources/assets/dreamstar/sounds.json /tmp/src/src/main/resources/assets/dreamstar/sounds.json
-          cp src/main/resources/assets/dreamstar/sounds/time_crystal_launch.ogg /tmp/src/src/main/resources/assets/dreamstar/sounds/time_crystal_launch.ogg
+          cat .github/source_parts/delta.b64.* | tr -d '\n\r' | base64 --decode > /tmp/delta.zip
+          unzip -qo /tmp/delta.zip -d /tmp/src
+          echo '--- CANNON FILES ---'
+          find /tmp/src/src/main/java/dev/dreamstar -type f | grep -E '/(cannon|point|thunder|thousand)/' | sort || true
+          echo '--- CANNON RESOURCES ---'
+          find /tmp/src/src/main/resources/assets/dreamstar -type f | grep -E 'cannon|point|thunder|thousand' | sort | head -200 || true
       - name: Build final reobfuscated jar
         working-directory: /tmp/src
         run: gradle clean build --no-daemon --stacktrace
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-time-crystal-build
+          name: dreamstar-lock-strike-base-check
           path: /tmp/src/build/libs/*.jar
           if-no-files-found: error
           retention-days: 7
