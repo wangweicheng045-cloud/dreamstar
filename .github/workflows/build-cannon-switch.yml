@@ -1,7 +1,7 @@
-name: Build DreamStar Cannon Switch
+name: Build DreamStar Locked Strike
 on:
   push:
-    branches: [ "build-0.5.1-cannon-switch" ]
+    branches: [ "lock-strike-compile-0.5.29" ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Reconstruct exact base and apply switch delta
+      - name: Reconstruct exact cannon source and apply locked strike overlay
         shell: bash
         run: |
           set -euo pipefail
@@ -24,6 +24,8 @@ jobs:
           cp -a ci/rework/src/. "$PROJECT_DIR/src/"
           cat ci/cannon-switch/delta.b64.* | tr -d '\n\r' | base64 --decode > /tmp/delta.tar.xz
           tar -xJf /tmp/delta.tar.xz -C "$PROJECT_DIR"
+          mkdir -p "$PROJECT_DIR/src/main/java/dev/dreamstar"
+          cp -a ci/lockstrike/src/dev/dreamstar/. "$PROJECT_DIR/src/main/java/dev/dreamstar/"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
@@ -38,7 +40,7 @@ jobs:
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dreamstar-cannon-switch-compiled
+          name: dreamstar-locked-strike-compiled
           path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
