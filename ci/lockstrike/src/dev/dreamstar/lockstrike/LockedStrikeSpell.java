@@ -18,6 +18,7 @@ public final class LockedStrikeSpell extends AbstractSpell {
     @Override public ResourceLocation getSpellResource(){return LockedStrikeRegistry.ID;}
     @Override public DefaultConfig getDefaultConfig(){return config;}
     @Override public CastType getCastType(){return CastType.INSTANT;}
+    @Override public int getSpellCooldown(){return 800;}
     @Override public SpellRarity getRarity(int level){return level<=1?SpellRarity.EPIC:SpellRarity.LEGENDARY;}
     @Override public int getMinLevelForRarity(SpellRarity rarity){return rarity==SpellRarity.EPIC?1:rarity==SpellRarity.LEGENDARY?2:0;}
     @Override public boolean checkPreCastConditions(Level world,int level,LivingEntity caster,MagicData data){
