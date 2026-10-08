@@ -26,11 +26,11 @@ jobs:
           gradle-version: "8.8"
       - name: Reconstruct source and delta
         run: |
-          cat ci/dreamstar-0.5.1-source.b64.* | tr -d '\n\r' | base64 --decode > /tmp/src.zip
+          cat ci/dreamstar-0.5.1-source.b64.* | tr -d '\n\r' | base64 --decode --ignore-garbage > /tmp/src.zip
           rm -rf /tmp/src
           mkdir -p /tmp/src
           unzip -q /tmp/src.zip -d /tmp/src
-          cat .github/source_parts/delta.b64.* | tr -d '\n\r' | base64 --decode > /tmp/delta.zip
+          cat .github/source_parts/delta.b64.* | tr -d '\n\r' | base64 --decode --ignore-garbage > /tmp/delta.zip
           unzip -qo /tmp/delta.zip -d /tmp/src
           echo '--- CANNON FILES ---'
           find /tmp/src/src/main/java/dev/dreamstar -type f | grep -E '/(cannon|point|thunder|thousand)/' | sort || true
