@@ -89,11 +89,18 @@ jobs:
           cp -a "$HOME/.gradle/caches" /tmp/offline/gradle-user-home/
           cp -a "$HOME/.gradle/daemon" /tmp/offline/gradle-user-home/ 2>/dev/null || true
           du -sh /tmp/offline/*
-          tar -I 'zstd -10 -T0' -cf /tmp/forge-offline-env.tar.zst -C /tmp/offline .
-          ls -lh /tmp/forge-offline-env.tar.zst
+          tar -I 'zstd -15 -T0' -cf /tmp/gradle-8.8.tar.zst -C /tmp/offline gradle-8.8
+          tar -I 'zstd -15 -T0' -cf /tmp/forge-gradle-cache.tar.zst -C /tmp/offline gradle-user-home
+          ls -lh /tmp/gradle-8.8.tar.zst /tmp/forge-gradle-cache.tar.zst
       - uses: actions/upload-artifact@v4
         with:
-          name: forge-offline-env-1.20.1-47.4.0
-          path: /tmp/forge-offline-env.tar.zst
+          name: gradle-8.8-offline
+          path: /tmp/gradle-8.8.tar.zst
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-gradle-cache-1.20.1-47.4.0
+          path: /tmp/forge-gradle-cache.tar.zst
           compression-level: 0
           retention-days: 1
