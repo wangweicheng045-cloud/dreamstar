@@ -92,15 +92,54 @@ jobs:
           tar -I 'zstd -15 -T0' -cf /tmp/gradle-8.8.tar.zst -C /tmp/offline gradle-8.8
           tar -I 'zstd -15 -T0' -cf /tmp/forge-gradle-cache.tar.zst -C /tmp/offline gradle-user-home
           ls -lh /tmp/gradle-8.8.tar.zst /tmp/forge-gradle-cache.tar.zst
+          split -b 80000000 -d -a 2 /tmp/gradle-8.8.tar.zst /tmp/gradle-part-
+          split -b 80000000 -d -a 2 /tmp/forge-gradle-cache.tar.zst /tmp/cache-part-
+          ls -lh /tmp/gradle-part-* /tmp/cache-part-*
       - uses: actions/upload-artifact@v4
         with:
-          name: gradle-8.8-offline
-          path: /tmp/gradle-8.8.tar.zst
+          name: gradle-part-00
+          path: /tmp/gradle-part-00
           compression-level: 0
           retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
-          name: forge-gradle-cache-1.20.1-47.4.0
-          path: /tmp/forge-gradle-cache.tar.zst
+          name: gradle-part-01
+          path: /tmp/gradle-part-01
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-00
+          path: /tmp/cache-part-00
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-01
+          path: /tmp/cache-part-01
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-02
+          path: /tmp/cache-part-02
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-03
+          path: /tmp/cache-part-03
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-04
+          path: /tmp/cache-part-04
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-part-05
+          path: /tmp/cache-part-05
           compression-level: 0
           retention-days: 1
