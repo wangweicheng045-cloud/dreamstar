@@ -1,0 +1,99 @@
+name: Prepare Forge 1.20.1 offline build env
+
+on:
+  push:
+    branches: [ "chatgpt-build-fairy-0.5.37" ]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Create matching ForgeGradle project
+        shell: bash
+        run: |
+          mkdir -p /tmp/ds/src/main/java/probe
+          cat > /tmp/ds/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  gradlePluginPortal()
+                  maven { url = 'https://maven.minecraftforge.net' }
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'dreamstar-probe'
+          EOF
+          cat > /tmp/ds/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx3G
+          org.gradle.daemon=false
+          minecraft_version=1.20.1
+          forge_version=47.4.0
+          irons_version=1.20.1-3.16.0
+          irons_lib_version=1.20.1-1.1.0
+          EOF
+          cat > /tmp/ds/build.gradle <<'EOF'
+          plugins {
+              id 'java'
+              id 'net.minecraftforge.gradle' version '6.0.54'
+          }
+          java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+          minecraft {
+              mappings channel: 'official', version: minecraft_version
+          }
+          repositories {
+              mavenCentral()
+              maven { url = 'https://code.redspace.io/releases' }
+              maven { url = 'https://maven.theillusivec4.top' }
+              maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+              maven { url = 'https://maven.kosmx.dev/' }
+          }
+          dependencies {
+              minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+              implementation fg.deobf("io.redspace:irons_spellbooks:${irons_version}")
+              runtimeOnly fg.deobf("io.redspace:irons_lib:${irons_lib_version}")
+              runtimeOnly fg.deobf('top.theillusivec4.curios:curios-forge:5.14.1+1.20.1')
+              runtimeOnly fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.8.2')
+              compileOnly fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.8.2')
+              runtimeOnly fg.deobf('dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20')
+          }
+          jar.finalizedBy('reobfJar')
+          EOF
+          cat > /tmp/ds/src/main/java/probe/Probe.java <<'EOF'
+          package probe;
+          import net.minecraft.world.entity.Entity;
+          import net.minecraftforge.eventbus.api.SubscribeEvent;
+          import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+          public class Probe { Entity e; AbstractSpell s; }
+          EOF
+          cd /tmp/ds
+          gradle --no-daemon --stacktrace clean classes jar reobfJar
+      - name: Pack offline Gradle environment
+        shell: bash
+        run: |
+          GRADLE_BIN="$(readlink -f "$(command -v gradle)")"
+          GRADLE_HOME="$(cd "$(dirname "$GRADLE_BIN")/.." && pwd)"
+          echo "Gradle home: $GRADLE_HOME"
+          mkdir -p /tmp/offline
+          cp -a "$GRADLE_HOME" /tmp/offline/gradle-8.8
+          mkdir -p /tmp/offline/gradle-user-home
+          cp -a "$HOME/.gradle/caches" /tmp/offline/gradle-user-home/
+          cp -a "$HOME/.gradle/daemon" /tmp/offline/gradle-user-home/ 2>/dev/null || true
+          du -sh /tmp/offline/*
+          tar -I 'zstd -10 -T0' -cf /tmp/forge-offline-env.tar.zst -C /tmp/offline .
+          ls -lh /tmp/forge-offline-env.tar.zst
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-offline-env-1.20.1-47.4.0
+          path: /tmp/forge-offline-env.tar.zst
+          compression-level: 0
+          retention-days: 1
